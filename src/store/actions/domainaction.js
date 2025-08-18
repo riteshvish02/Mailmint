@@ -7,7 +7,8 @@ import {
   fetchDomainsRequest,
   fetchDomainsSuccess,
   fetchDomainsFail,
-  fetchSingleDomainSuccess
+  fetchSingleDomainSuccess,
+  isSuccess
 } from "../reducers/domainReducer";
 import { 
   isUserFail, 
@@ -125,10 +126,12 @@ export const PublishMail = (id,toast) => async (dispatch) => {
  dispatch(isDomainRequest());
   try {
     const { data } = await axios.post(`/api/v1/publish/${id}`);
-    console.log(data);
+    // console.log(data);
 
     if (data?.SuccessResponse) {
       toast.success("Email published successfully");
+      dispatch(isSuccess());
+      // dispatch(fetchDomains());
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to publish email";
       dispatch(fetchDomainsFail(errorMessage));

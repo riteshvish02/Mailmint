@@ -16,7 +16,7 @@ import {
 
 // Add Mail Setting Action
 export const addMailSetting = (mailSettingData, onSuccess, onError) => async (dispatch) => {
-  console.log(mailSettingData);
+  // console.log(mailSettingData);
   
   dispatch(isMailSettingRequest());
   try {

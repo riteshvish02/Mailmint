@@ -61,6 +61,10 @@ export const domainSlice = createSlice({
     clearFetchError: (state) => {
       state.fetchError = null;
     },
+    isSuccess: (state) => {
+      state.loading = false;
+      state.error = null;
+    }
   },
 });
 
@@ -75,6 +79,7 @@ export const {
   clearDomainMessage,
   clearFetchError,
   fetchSingleDomainSuccess,
+  isSuccess
 } = domainSlice.actions;
 
 export default domainSlice.reducer;

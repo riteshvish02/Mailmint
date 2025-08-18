@@ -26,7 +26,7 @@ const SubscriberManager = () => {
     loading: domainLoading,
     error: domainError,
   } = useSelector((state) => state.domain);
-
+  console.log(domains);
   const {
     subscribers,
     loading: subscriberLoading,

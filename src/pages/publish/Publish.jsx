@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
-const POLL_INTERVAL = 30; // 3 seconds (changed from 20ms which was too fast)
+const POLL_INTERVAL = 4000; // 3 seconds
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDomains, PublishMail, resetDomainEmailStatus } from "../../store/actions/domainaction";
 import {
   Database,
+  Edit,
+  Trash2,
   Plus,
   RefreshCw,
-  FileText,
+  Search,
+  Settings,
   Mail,
+  FileText,
 } from "lucide-react";
 import {toast} from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -15,55 +19,66 @@ import { useNavigate } from "react-router-dom";
 const Publish = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [needsPolling, setNeedsPolling] = useState(false);
 
   const { domains, fetchLoading, fetchError } = useSelector(
     (state) => state.domain
   );
+  // console.log(domains);
 
-  // Check if any domain is in progress
-  const hasActiveSending = domains?.some(domain => domain.sendingInProgress);
+useEffect(() => {
+  let interval;
+  
+  // Initial fetch
+  dispatch(fetchDomains());
 
-  useEffect(() => {
-    dispatch(fetchDomains()); // initial fetch
-    
-    // Start polling if there's active sending
-    if (hasActiveSending) {
-      setNeedsPolling(true);
+  const startPolling = () => {
+    interval = setInterval(() => {
+      dispatch(fetchDomains());
+    }, POLL_INTERVAL);
+  };
+
+  // Handle tab visibility changes
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      clearInterval(interval);
+    } else {
+      startPolling();
     }
-  }, [dispatch, hasActiveSending]);
+  };
 
-  useEffect(() => {
-    let interval;
-    
-    if (needsPolling) {
-      interval = setInterval(() => {
-        dispatch(fetchDomains());
-        
-        // Check if we can stop polling (no more active sending)
-        const stillActive = domains?.some(domain => domain.sendingInProgress);
-        if (!stillActive) {
-          setNeedsPolling(false);
-        }
-      }, POLL_INTERVAL);
-    }
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  startPolling();
 
-    return () => clearInterval(interval);
-  }, [needsPolling, dispatch, domains]);
-
+  return () => {
+    clearInterval(interval);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [dispatch]); // Added fetchError as dependency
   const handleRefresh = () => {
     dispatch(fetchDomains());
   };
 
+
+  const [publishingIds, setPublishingIds] = useState([]);
   const handlePublishDomain = (domainId) => {
-    dispatch(PublishMail(domainId, toast)).then(() => {
-      // After publishing, start polling to track progress
-      setNeedsPolling(true);
-    });
+    setPublishingIds((prev) => [...prev, domainId]);
+    dispatch(PublishMail(domainId, toast));
   };
+
+  // Remove domainId from publishingIds when sendingInProgress becomes true (backend picked up the job)
+  useEffect(() => {
+    if (domains && domains.length > 0) {
+      setPublishingIds((prev) => prev.filter(id => {
+        const d = domains.find(dom => dom._id === id);
+        // Remove from publishingIds if sendingInProgress is true or reset is done (emailsTotal === 0)
+        return d && !d.sendingInProgress && d.emailsTotal > 0;
+      }));
+    }
+  }, [domains]);
 
   const handleResetDomain = (domainId) => {
     dispatch(resetDomainEmailStatus(domainId, toast));
+    setPublishingIds((prev) => prev.filter(id => id !== domainId)); // Enable publish after reset
   };
 
   if (fetchLoading && domains.length === 0) {
@@ -164,6 +179,9 @@ const Publish = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Delivered
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Failed
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -242,15 +260,19 @@ const Publish = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {domain.emailsSent}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {domain.emailsFailed}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end">
                         <button
                           onClick={() => handlePublishDomain(domain._id)}
-                          disabled={domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0)}
-                          className={`inline-flex items-center px-3 py-2 border border-blue-500 shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${(domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0) || publishingIds.includes(domain._id)}
+                          className={`inline-flex items-center px-3 py-2 border border-blue-500 shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${(domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0) || publishingIds.includes(domain._id)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <Mail className="h-4 w-4 mr-1" />
                           Publish
                         </button>
+  
                         {/* Show Reset button only if sending is NOT in progress and emailsTotal > 0 */}
                         {(!domain.sendingInProgress && domain.emailsTotal > 0) && (
                           <button
