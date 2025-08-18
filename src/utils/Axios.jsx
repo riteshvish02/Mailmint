@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const baseURL = window.location.hostname === 'localhost'
   ? 'http://localhost:5000'
-  : 'https://syneidesis-backend.onrender.com';
+  : 'https://email-marketing-tkkj.onrender.com';
 const Instance = axios.create({
     baseURL,
     withCredentials: true,
