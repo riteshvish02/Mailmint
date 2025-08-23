@@ -229,7 +229,7 @@ const EditDomain = () => {
                     <div>
                         <label htmlFor="mailSetting" className="block text-sm font-medium text-gray-700 mb-2">
                             <Mail className="h-4 w-4 inline mr-1" />
-                            Mail Setting
+                            Mail Subject
                         </label>
                         <select
                             id="mailSetting"
@@ -238,9 +238,9 @@ const EditDomain = () => {
                             className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             disabled={mailSettingsLoading}
                         >
-                            <option value="">Select a mail setting...</option>
+                            <option value="">Select a mail subject...</option>
                             {mailSettingsLoading ? (
-                                <option disabled>Loading mail settings...</option>
+                                <option disabled>Loading mail subjects...</option>
                             ) : (
                                 mailSettings?.map((setting) => (
                                     <option key={setting._id} value={setting._id}>
@@ -250,7 +250,7 @@ const EditDomain = () => {
                             )}
                         </select>
                         <p className="mt-1 text-sm text-gray-500">
-                            Choose mail settings that define the campaign parameters and sending configuration.
+                            Choose mail subjects that define the campaign parameters and sending configuration.
                         </p>
                         
                         {/* Current Mail Setting Status */}
@@ -258,7 +258,7 @@ const EditDomain = () => {
                             <div className="flex items-center">
                                 <Mail className="h-4 w-4 text-green-600 mr-2" />
                                 <span className="text-sm font-medium text-green-800">
-                                    Current Mail Setting: 
+                                    Current Mail Subject: 
                                 </span>
                                 <span className="ml-1 text-sm text-green-700">
                                     {currentDomain.mailSetting ? currentDomain.mailSetting.title || 'Mail Setting Set' : 'No mail setting assigned'}

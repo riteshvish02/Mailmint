@@ -9,6 +9,7 @@ const initialState = {
   message: null,
   fetchLoading: false,
   fetchError: null,
+  queuedLoad: false,
 };
 
 export const domainSlice = createSlice({
@@ -50,7 +51,12 @@ export const domainSlice = createSlice({
       state.fetchLoading = false;
       state.fetchError = action.payload;
     },
-    
+    setQueuedLoad: (state, action) => {
+      state.queuedLoad = true;
+    },
+    clearQueuedLoad: (state) => {
+      state.queuedLoad = false;
+    },
     // Clear Actions
     clearDomainError: (state) => {
       state.error = null;
@@ -79,7 +85,9 @@ export const {
   clearDomainMessage,
   clearFetchError,
   fetchSingleDomainSuccess,
-  isSuccess
+  isSuccess,
+  setQueuedLoad,
+  clearQueuedLoad
 } = domainSlice.actions;
 
 export default domainSlice.reducer;

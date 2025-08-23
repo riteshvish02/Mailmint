@@ -50,9 +50,9 @@ const Layout = () => {
         { name: 'Add Subscriber', icon: UserPlus, path: '/add-subscriber' },
         { name: 'Template List', icon: List, path: '/templates' },
         { name: 'Create Templates', icon: Edit, path: '/templates/create' },
-        { name: 'Mail Settings', icon: Settings, path: '/mail-settings' },
+        { name: 'Create Mail subject', icon: Settings, path: '/mail-settings' },
         { name: 'Publish Mail List', icon: Send, path: '/publish-mail' },
-        // { name: 'Mail Report', icon: FileText, path: '/mail-report' },
+        { name: 'Domain Daily Stats', icon: FileText, path: '/domain-daily-stats' },
     ];
 
     return (

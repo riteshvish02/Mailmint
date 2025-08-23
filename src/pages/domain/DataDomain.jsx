@@ -131,11 +131,9 @@ const DataDomain = () => {
                       Template
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mail Setting
+                      Mail Subject
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
+                    
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -214,14 +212,7 @@ const DataDomain = () => {
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className="text-gray-900 line-clamp-2 max-w-xs"
-                          title={domain.description}
-                        >
-                          {domain.description || "No description"}
-                        </div>
-                      </td>
+                    
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEditDomain(domain._id)}

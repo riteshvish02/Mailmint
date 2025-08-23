@@ -8,11 +8,14 @@ import {
   fetchDomainsSuccess,
   fetchDomainsFail,
   fetchSingleDomainSuccess,
-  isSuccess
+  isSuccess,
+  setQueuedLoad,
+  clearQueuedLoad
 } from "../reducers/domainReducer";
 import { 
   isUserFail, 
 } from "../reducers/usersReducer";
+export {clearQueuedLoad} from "../reducers/domainReducer";
 // Add Domain Action
   export const addDomain = (domainData, onSuccess, onError) => async (dispatch) => {
   
@@ -122,15 +125,17 @@ export const updateDomain = (domainData,id,toast) => async (dispatch) => {
   }
 };
 
-export const PublishMail = (id,toast) => async (dispatch) => {
- dispatch(isDomainRequest());
+export const PublishMail = (id, toast, limit = null) => async (dispatch) => {
+   dispatch(isDomainRequest());
+   dispatch(setQueuedLoad());
   try {
-    const { data } = await axios.post(`/api/v1/publish/${id}`);
-    // console.log(data);
+    const payload = limit ? { limit } : {};
+    const { data } = await axios.post(`/api/v1/publish/${id}`, payload);
+    console.log(data);
 
     if (data?.SuccessResponse) {
       toast.success("Email published successfully");
-      dispatch(isSuccess());
+      await dispatch(isSuccess());
       // dispatch(fetchDomains());
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to publish email";
@@ -154,7 +159,8 @@ export const resetDomainEmailStatus = (id, toast) => async (dispatch) => {
     const { data } = await axios.post(`/api/v1/publish/${id}/reset`);
     if (data?.SuccessResponse) {
       toast && toast.success("Domain email status reset successfully");
-      dispatch(fetchDomains());
+      await dispatch(fetchDomains());
+      await dispatch(clearQueuedLoad());
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to reset domain email status";
       dispatch(fetchDomainsFail(errorMessage));

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-const POLL_INTERVAL = 4000; // 3 seconds
+const POLL_INTERVAL = 500; // 500 milliseconds
 import { useDispatch, useSelector } from "react-redux";
-import { fetchDomains, PublishMail, resetDomainEmailStatus } from "../../store/actions/domainaction";
+import { fetchDomains, PublishMail, resetDomainEmailStatus,clearQueuedLoad } from "../../store/actions/domainaction";
 import {
   Database,
   Edit,
@@ -12,27 +12,36 @@ import {
   Settings,
   Mail,
   FileText,
+  X,
 } from "lucide-react";
 import {toast} from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
+
 const Publish = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // State for limit modal
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [selectedDomainId, setSelectedDomainId] = useState(null);
+  const [emailLimit, setEmailLimit] = useState('');
+  const [publishingDomains, setPublishingDomains] = useState(new Set());
 
-  const { domains, fetchLoading, fetchError } = useSelector(
+  const { domains, fetchLoading, fetchError,queuedLoad } = useSelector(
     (state) => state.domain
   );
-  // console.log(domains);
+  console.log(queuedLoad);
 
 useEffect(() => {
   let interval;
-  
+
   // Initial fetch
   dispatch(fetchDomains());
 
   const startPolling = () => {
     interval = setInterval(() => {
+      console.log("Fetching domains...");
       dispatch(fetchDomains());
     }, POLL_INTERVAL);
   };
@@ -54,31 +63,69 @@ useEffect(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 }, [dispatch]); // Added fetchError as dependency
+
+  // Monitor sendingInProgress and clear queuedLoad when sending is complete
+  useEffect(() => {
+    if (domains && domains.length > 0) {
+      // Remove domains from publishingDomains when they start sending (sendingInProgress becomes true)
+      // or when they finish sending (sendingInProgress becomes false and emailsTotal becomes 0)
+      setPublishingDomains(prev => {
+        const newSet = new Set(prev);
+        domains.forEach(domain => {
+          if (newSet.has(domain._id)) {
+            // Remove if domain is now sending or finished
+            if (domain.sendingInProgress || domain.emailsTotal === 0) {
+              newSet.delete(domain._id);
+            }
+          }
+        });
+        return newSet;
+      });
+
+      // Clear global queuedLoad when no domains are sending
+      if (queuedLoad) {
+        const hasAnySendingInProgress = domains.some(domain => domain.sendingInProgress);
+        if (!hasAnySendingInProgress) {
+          console.log("No domains are sending, clearing queuedLoad");
+          dispatch(clearQueuedLoad());
+        }
+      }
+    }
+  }, [domains, queuedLoad, dispatch]);
+
   const handleRefresh = () => {
     dispatch(fetchDomains());
   };
 
+  
+  
 
-  const [publishingIds, setPublishingIds] = useState([]);
   const handlePublishDomain = (domainId) => {
-    setPublishingIds((prev) => [...prev, domainId]);
-    dispatch(PublishMail(domainId, toast));
+    setSelectedDomainId(domainId);
+    setShowLimitModal(true);
   };
 
-  // Remove domainId from publishingIds when sendingInProgress becomes true (backend picked up the job)
-  useEffect(() => {
-    if (domains && domains.length > 0) {
-      setPublishingIds((prev) => prev.filter(id => {
-        const d = domains.find(dom => dom._id === id);
-        // Remove from publishingIds if sendingInProgress is true or reset is done (emailsTotal === 0)
-        return d && !d.sendingInProgress && d.emailsTotal > 0;
-      }));
-    }
-  }, [domains]);
+  const confirmPublish = () => {
+    const limit = emailLimit && emailLimit > 0 ? parseInt(emailLimit) : null;
+    
+    // Add domain to publishing set
+    setPublishingDomains(prev => new Set(prev).add(selectedDomainId));
+    
+    dispatch(PublishMail(selectedDomainId, toast, limit));
+    setShowLimitModal(false);
+    setEmailLimit('');
+    setSelectedDomainId(null);
+  };
+
+  const cancelPublish = () => {
+    setShowLimitModal(false);
+    setEmailLimit('');
+    setSelectedDomainId(null);
+  };
 
   const handleResetDomain = (domainId) => {
     dispatch(resetDomainEmailStatus(domainId, toast));
-    setPublishingIds((prev) => prev.filter(id => id !== domainId)); // Enable publish after reset
+    // setPublishingIds((prev) => prev.filter(id => id !== domainId)); // Enable publish after reset
   };
 
   if (fetchLoading && domains.length === 0) {
@@ -93,7 +140,8 @@ useEffect(() => {
   }
 
   return (
-    domains && (
+    <>
+    {domains && (
       <div className="p-4 md:p-6 bg-gray-100">
         <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -171,10 +219,13 @@ useEffect(() => {
                       Mail Setting
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Subscribers
+                      Total Subscribers
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Progress
+                      Remaining mails
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      In Progress
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Delivered
@@ -251,10 +302,48 @@ useEffect(() => {
                         {domain.subscribers}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          (domain.subscribers - (domain.fromIndex || 0)) > 0 
+                            ? 'bg-orange-100 text-orange-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {domain.subscribers - (domain.fromIndex || 0)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {domain.sendingInProgress ? (
-                          <span className="text-blue-600">In Progress</span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                              <span className="text-sm text-blue-600 font-medium">
+                                {domain.emailsSent || 0}/{domain.emailsTotal || 0}
+                              </span>
+                              <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
+                                {domain.emailsRemaining || 0} in progress
+                              </span>
+                            </div>
+                            {domain.emailsTotal > 0 && (
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div 
+                                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                                  style={{ 
+                                    width: `${Math.min(100, ((domain.emailsSent || 0) / domain.emailsTotal) * 100)}%` 
+                                  }}
+                                ></div>
+                              </div>
+                            )}
+                            <span className="text-xs text-gray-500">
+                              {domain.emailsTotal > 0 
+                                ? `${Math.round(((domain.emailsSent || 0) / domain.emailsTotal) * 100)}% sent`
+                                : 'Preparing...'
+                              }
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-green-600">Idle</span>
+                          <span className="text-green-600 flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                            Idle
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -266,8 +355,8 @@ useEffect(() => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end">
                         <button
                           onClick={() => handlePublishDomain(domain._id)}
-                          disabled={domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0) || publishingIds.includes(domain._id)}
-                          className={`inline-flex items-center px-3 py-2 border border-blue-500 shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${(domain.sendingInProgress || (!domain.sendingInProgress && domain.emailsTotal > 0) || publishingIds.includes(domain._id)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={publishingDomains.has(domain._id) || domain.sendingInProgress}
+                          className={`inline-flex items-center px-3 py-2 border border-blue-500 shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${(publishingDomains.has(domain._id) || domain.sendingInProgress) ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''}`}
                         >
                           <Mail className="h-4 w-4 mr-1" />
                           Publish
@@ -317,7 +406,82 @@ useEffect(() => {
           </div>
         )}
       </div>
-    )
+    )}
+    
+    {/* Limit Selection Modal */}
+    {showLimitModal && (
+      <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Set Email Limit</h3>
+            <button
+              onClick={cancelPublish}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {(() => {
+            const selectedDomain = domains.find(d => d._id === selectedDomainId);
+            const remainingSubscribers = selectedDomain ? (selectedDomain.subscribers - (selectedDomain.fromIndex || 0)) : 0;
+            
+            return (
+              <>
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Total Subscribers:</strong> {selectedDomain?.subscribers || 0}
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    <strong>Already Sent:</strong> {selectedDomain?.fromIndex || 0}
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    <strong>Remaining:</strong> {remainingSubscribers}
+                  </p>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Number of emails to send (max: {remainingSubscribers})
+                  </label>
+                  <input
+                    type="number"
+                    value={emailLimit}
+                    onChange={(e) => setEmailLimit(e.target.value)}
+                    placeholder={`e.g. ${Math.min(2000, remainingSubscribers)} (leave empty for all remaining)`}
+                    min="1"
+                    max={remainingSubscribers}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {emailLimit && parseInt(emailLimit) > remainingSubscribers 
+                      ? `⚠️ Only ${remainingSubscribers} subscribers remaining. Will send to all remaining.`
+                      : `Enter the number of emails to send in this batch (max ${remainingSubscribers})`
+                    }
+                  </p>
+                </div>
+              </>
+            );
+          })()}
+          
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={cancelPublish}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmPublish}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Publish
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
