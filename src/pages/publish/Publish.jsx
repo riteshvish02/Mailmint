@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-const POLL_INTERVAL = 500; // 500 milliseconds
+const POLL_INTERVAL = 900; // 500 milliseconds
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDomains, PublishMail, resetDomainEmailStatus,clearQueuedLoad } from "../../store/actions/domainaction";
 import {
