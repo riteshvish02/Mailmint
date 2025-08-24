@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Edit, Trash2, Eye, Send, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, RefreshCw, Mail, Settings, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { fetchMailSettings, deleteMailSetting, updateMailSetting } from '../../store/actions/mailSettingaction';
@@ -12,8 +12,11 @@ const ListMailSettings = () => {
   const { mailSettings = [], fetchLoading = false, error = null } = useSelector(state => state.mailSetting || {});
   
   const [selectedRows, setSelectedRows] = useState([]);
-  const [editingSubject, setEditingSubject] = useState(null);
-  const [editSubjectValue, setEditSubjectValue] = useState('');
+  const [editingItem, setEditingItem] = useState(null);
+  const [editValues, setEditValues] = useState({
+    subject: '',
+    title: ''
+  });
   
   // Fetch mail settings on component mount
   useEffect(() => {
@@ -72,21 +75,25 @@ const ListMailSettings = () => {
     }
   };
 
-  const handleEditSubject = (id, currentSubject) => {
-    setEditingSubject(id);
-    setEditSubjectValue(currentSubject);
+  const handleEdit = (id, currentSubject, currentTitle) => {
+    setEditingItem(id);
+    setEditValues({
+      subject: currentSubject || '',
+      title: currentTitle || ''
+    });
   };
 
-  const handleSaveSubject = (id) => {
+  const handleSave = (id) => {
     const updateData = { 
-      subject: editSubjectValue
+      subject: editValues.subject,
+      title: editValues.title
     };
     
     dispatch(updateMailSetting(
       id,
       updateData,
       (data) => {
-        toast.success('Mail subject updated successfully!', {
+        toast.success('Mail setting updated successfully!', {
           position: "top-right",
           autoClose: 3000,
           hideProgressBar: false,
@@ -94,8 +101,8 @@ const ListMailSettings = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        setEditingSubject(null);
-        setEditSubjectValue('');
+        setEditingItem(null);
+        setEditValues({ subject: '', title: '' });
       },
       (errorMessage) => {
         toast.error(`Error: ${errorMessage}`, {
@@ -111,56 +118,15 @@ const ListMailSettings = () => {
   };
 
   const handleCancelEdit = () => {
-    setEditingSubject(null);
-    setEditSubjectValue('');
+    setEditingItem(null);
+    setEditValues({ subject: '', title: '' });
   };
 
-  const handlePublish = (id) => {
-    toast.info('Publishing functionality will be implemented', {
-      position: "top-right",
-      autoClose: 3000,
-    });
-  };
-
-  const handleView = (id) => {
-    toast.info('View functionality will be implemented', {
-      position: "top-right",
-      autoClose: 3000,
-    });
-  };
-
-  // Function to get domain name based on data structure
-  const getDomainName = (setting) => {
-    if (setting?.domain?.domain) {
-      return setting.domain.domain;
-    }
-    
-    if (setting?.domain?.name) {
-      return setting.domain.name;
-    }
-    
-    if (setting?.domainName) {
-      return setting.domainName;
-    }
-    
-    return 'N/A';
-  };
-
-  // Function to get template name based on data structure  
-  const getTemplateName = (setting) => {
-    if (setting?.template?.title) {
-      return setting.template.title;
-    }
-    
-    if (setting?.template?.name) {
-      return setting.template.name;
-    }
-    
-    if (setting?.templateTitle) {
-      return setting.templateTitle;
-    }
-    
-    return 'N/A';
+  const handleInputChange = (field, value) => {
+    setEditValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleBulkDelete = () => {
@@ -191,10 +157,10 @@ const ListMailSettings = () => {
 
   if (fetchLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="animate-spin" size={20} />
-          <div className="text-lg text-gray-600">Loading mail settings...</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex justify-center items-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center space-x-4">
+          <RefreshCw className="animate-spin text-blue-600" size={24} />
+          <div className="text-lg text-gray-700 font-medium">Loading mail settings...</div>
         </div>
       </div>
     );
@@ -202,72 +168,89 @@ const ListMailSettings = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-64 space-y-4">
-        <div className="text-lg text-red-600">Error: {error}</div>
-        <button
-          onClick={handleRefreshData}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Retry
-        </button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 flex flex-col justify-center items-center space-y-6">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <XCircle className="mx-auto text-red-500 mb-4" size={48} />
+          <div className="text-xl text-red-600 font-semibold mb-4">Error: {error}</div>
+          <button
+            onClick={handleRefreshData}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
         {/* Header */}
-        <div className="bg-white p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-800">Mail Settings List</h1>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Total: {mailSettings.length} mail settings
+        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
+                  <Mail className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Mail Settings</h1>
+                  <p className="text-gray-600 mt-1">Manage your email configuration settings</p>
+                </div>
               </div>
-              <button
-                onClick={handleRefreshData}
-                className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 flex items-center space-x-1"
-              >
-                <RefreshCw size={14} />
-                <span>Refresh</span>
-              </button>
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-xl">
+                  <Settings className="text-blue-600" size={16} />
+                  <span className="text-sm font-medium text-blue-700">
+                    {mailSettings.length} Settings
+                  </span>
+                </div>
+                <button
+                  onClick={handleRefreshData}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+                >
+                  <RefreshCw size={16} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="p-6">
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Table Container */}
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-blue-600 text-white">
-                    <th className="px-4 py-3 text-left">
+                  <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                    <th className="px-6 py-4 text-left">
                       <input
                         type="checkbox"
                         checked={selectedRows.length === mailSettings.length && mailSettings.length > 0}
                         onChange={handleSelectAll}
-                        className="rounded border-gray-300"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Sr No.</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Domain Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Template</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Mail Subject</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium">Actions</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Sr No.</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Title</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Mail Subject</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-100">
                   {mailSettings.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                        <div className="flex flex-col items-center space-y-2">
-                          <div>No mail settings found</div>
+                      <td colSpan="5" className="px-6 py-16 text-center">
+                        <div className="flex flex-col items-center space-y-4">
+                          <Mail className="text-gray-300" size={64} />
+                          <div className="text-xl text-gray-500 font-medium">No mail settings found</div>
+                          <p className="text-gray-400">Get started by creating your first mail setting</p>
                           <button
                             onClick={handleRefreshData}
-                            className="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
                           >
                             Refresh Data
                           </button>
@@ -276,81 +259,95 @@ const ListMailSettings = () => {
                     </tr>
                   ) : (
                     mailSettings.map((setting, index) => (
-                      <tr key={setting._id || setting.id || index} className="hover:bg-gray-50">
-                        <td className="px-4 py-4">
+                      <tr key={setting._id || setting.id || index} className="hover:bg-blue-50/50 transition-colors duration-150">
+                        <td className="px-6 py-5">
                           <input
                             type="checkbox"
                             checked={selectedRows.includes(setting._id || setting.id)}
                             onChange={() => handleRowSelect(setting._id || setting.id)}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
                           />
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
-                        <td className="px-4 py-4 text-sm text-blue-600">
-                          {getDomainName(setting)}
+                        <td className="px-6 py-5">
+                          <div className="flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                            {index + 1}
+                          </div>
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-900">
-                          {getTemplateName(setting)}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-900">
-                          {editingSubject === (setting._id || setting.id) ? (
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="text"
-                                value={editSubjectValue}
-                                onChange={(e) => setEditSubjectValue(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                maxLength="100"
-                              />
-                              <button
-                                onClick={() => handleSaveSubject(setting._id || setting.id)}
-                                className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                              >
-                                Cancel
-                              </button>
-                            </div>
+                        <td className="px-6 py-5">
+                          {editingItem === (setting._id || setting.id) ? (
+                            <input
+                              type="text"
+                              value={editValues.title}
+                              onChange={(e) => handleInputChange('title', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                              maxLength="100"
+                              placeholder="Enter title"
+                            />
                           ) : (
-                            <div className="max-w-xs truncate" title={setting.subject}>
-                              {setting.subject || 'N/A'}
+                            <div className="max-w-xs">
+                              <div className="font-medium text-gray-900 truncate" title={setting.title}>
+                                {setting.title || 'N/A'}
+                              </div>
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-sm text-center">
+                        <td className="px-6 py-5">
+                          {editingItem === (setting._id || setting.id) ? (
+                            <input
+                              type="text"
+                              value={editValues.subject}
+                              onChange={(e) => handleInputChange('subject', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                              maxLength="100"
+                              placeholder="Enter mail subject"
+                            />
+                          ) : (
+                            <div className="max-w-xs">
+                              <div className="text-gray-700 truncate" title={setting.subject}>
+                                {setting.subject || 'N/A'}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-5">
                           <div className="flex justify-center space-x-2">
-                            <button
-                              onClick={() => handleView(setting._id || setting.id)}
-                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-                              title="View Details"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => handlePublish(setting._id || setting.id)}
-                              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
-                              title="Publish"
-                            >
-                              <Send size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleEditSubject(setting._id || setting.id, setting.subject)}
-                              className="p-1 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded"
-                              title="Edit Subject"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(setting._id || setting.id)}
-                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {editingItem === (setting._id || setting.id) ? (
+                              <>
+                                <button
+                                  onClick={() => handleSave(setting._id || setting.id)}
+                                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-1"
+                                  title="Save Changes"
+                                >
+                                  <CheckCircle size={14} />
+                                  <span>Save</span>
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-1"
+                                  title="Cancel Edit"
+                                >
+                                  <XCircle size={14} />
+                                  <span>Cancel</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleEdit(setting._id || setting.id, setting.subject, setting.title)}
+                                  className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all duration-200"
+                                  title="Edit"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(setting._id || setting.id)}
+                                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -364,23 +361,30 @@ const ListMailSettings = () => {
 
         {/* Bulk Actions */}
         {selectedRows.length > 0 && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border p-4">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {selectedRows.length} item(s) selected
-              </span>
-              <button
-                onClick={handleBulkDelete}
-                className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-              >
-                Delete Selected
-              </button>
-              <button
-                onClick={() => setSelectedRows([])}
-                className="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-              >
-                Clear Selection
-              </button>
+          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-200/50 p-6">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="text-blue-600" size={20} />
+                  <span className="text-gray-700 font-medium">
+                    {selectedRows.length} item(s) selected
+                  </span>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Delete Selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedRows([])}
+                    className="px-6 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

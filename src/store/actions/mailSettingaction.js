@@ -16,8 +16,7 @@ import {
 
 // Add Mail Setting Action
 export const addMailSetting = (mailSettingData, onSuccess, onError) => async (dispatch) => {
-  // console.log(mailSettingData);
-  
+ 
   dispatch(isMailSettingRequest());
   try {
     const { data } = await axios.post("/api/v1/mailsetting", mailSettingData);
@@ -45,7 +44,6 @@ export const fetchMailSettings = () => async (dispatch) => {
   dispatch(fetchMailSettingsRequest());
   try {
     const { data } = await axios.get("/api/v1/mailsetting");
-    console.log(data);
     
     if (data?.SuccessResponse) {
       dispatch(fetchMailSettingsSuccess(data.SuccessResponse.data));

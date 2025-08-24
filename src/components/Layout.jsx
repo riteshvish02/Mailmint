@@ -51,6 +51,7 @@ const Layout = () => {
         { name: 'Template List', icon: List, path: '/templates' },
         { name: 'Create Templates', icon: Edit, path: '/templates/create' },
         { name: 'Create Mail subject', icon: Settings, path: '/mail-settings' },
+        { name: 'Mail Subject List', icon: Send, path: '/mail-setting-list' },
         { name: 'Publish Mail List', icon: Send, path: '/publish-mail' },
         { name: 'Domain Daily Stats', icon: FileText, path: '/domain-daily-stats' },
     ];

@@ -29,6 +29,7 @@ import { toast } from 'react-toastify';
 import { userLogout } from '../store/actions/useraction';
 import { fetchDomains } from '../store/actions/domainaction';
 import { listTemplates } from '../store/actions/templateaction';
+import { getSubscribersByDomain } from '../store/actions/subsaction'; // Import the action
 
 const Dashboard = () => {
     const dispatch = useDispatch();
@@ -39,6 +40,10 @@ const Dashboard = () => {
     // Get real data from Redux store
     const { domains = [], loading: domainLoading } = useSelector(state => state.domain);
     const { templates = [], fetchLoading: templateLoading } = useSelector(state => state.template);
+    
+    // Handle subscriber state safely - it might not exist in Redux store yet
+    const subscriberState = useSelector(state => state.subscriber || {});
+    const { subscribersByDomain = {}, loading: subscribersLoading = false } = subscriberState;
     
     const [dashboardStats, setDashboardStats] = useState({
         totalDomains: 0,
@@ -53,6 +58,7 @@ const Dashboard = () => {
     });
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [loadingSubscribers, setLoadingSubscribers] = useState(false);
 
     // Check authentication status on component mount
     useEffect(() => {
@@ -82,6 +88,80 @@ const Dashboard = () => {
         }
     }, [dispatch, isAuthenticated]);
 
+    // Load subscribers count for all domains
+    useEffect(() => {
+        const loadSubscribersData = async () => {
+            if (domains.length === 0) return;
+            
+            setLoadingSubscribers(true);
+            try {
+                let totalSubscribers = 0;
+                
+                // Fetch subscribers for each domain sequentially to avoid overwhelming the API
+                for (const domain of domains) {
+                    try {
+                        const domainName = domain.domain || domain.name || domain.domainName;
+                        if (!domainName) {
+                            console.warn('Domain name not found for domain:', domain);
+                            continue;
+                        }
+
+                        await new Promise((resolve) => {
+                            dispatch(getSubscribersByDomain(
+                                domainName,
+                                (data) => {
+                                    // Handle different possible response structures
+                                    let count = 0;
+                                    if (data.subscribers && Array.isArray(data.subscribers)) {
+                                        count = data.subscribers.length;
+                                    } else if (data.data && Array.isArray(data.data)) {
+                                        count = data.data.length;
+                                    } else if (typeof data.count === 'number') {
+                                        count = data.count;
+                                    } else if (Array.isArray(data)) {
+                                        count = data.length;
+                                    }
+                                    
+                                    totalSubscribers += count;
+                                    console.log(`Domain ${domainName}: ${count} subscribers`);
+                                    resolve();
+                                },
+                                (error) => {
+                                    console.error(`Error loading subscribers for ${domainName}:`, error);
+                                    resolve(); // Continue with other domains
+                                }
+                            ));
+                        });
+                        
+                        // Small delay between API calls to be nice to the server
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                    } catch (error) {
+                        console.error(`Error processing domain:`, domain, error);
+                    }
+                }
+                
+                console.log(`Total subscribers across all domains: ${totalSubscribers}`);
+                
+                setDashboardStats(prev => ({
+                    ...prev,
+                    totalSubscribers: totalSubscribers
+                }));
+                
+            } catch (error) {
+                console.error('Error loading subscribers data:', error);
+                toast.error('Failed to load subscriber counts');
+            } finally {
+                setLoadingSubscribers(false);
+            }
+        };
+
+        // Only load subscribers after domains are loaded
+        if (domains.length > 0) {
+            loadSubscribersData();
+        }
+    }, [dispatch, domains]);
+
     // Update stats when data changes
     useEffect(() => {
         const updateStats = () => {
@@ -94,8 +174,7 @@ const Dashboard = () => {
                 activeDomains: activeDomains,
                 totalTemplates: templates.length,
                 activeTemplates: activeTemplates,
-                totalSubscribers: 316342,  
-                emailsSentToday: 17000,  
+                emailsSentToday: 17000,  // Keep these as mock data for now
                 emailsSentThisMonth: 170000  
             }));
         };
@@ -235,7 +314,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         
-                        {/* Subscribers Card */}
+                        {/* Subscribers Card - Now with real data */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -246,11 +325,18 @@ const Dashboard = () => {
                                         <div>
                                             <p className="text-sm text-gray-600">Total Subscribers</p>
                                             <p className="text-2xl font-bold text-purple-600">
-                                                {dashboardStats.totalSubscribers.toLocaleString()}
+                                                {loadingSubscribers ? (
+                                                    <span className="flex items-center">
+                                                        <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                                                        Loading...
+                                                    </span>
+                                                ) : (
+                                                    dashboardStats.totalSubscribers.toLocaleString()
+                                                )}
                                             </p>
                                             <p className="text-xs text-green-600 mt-1 flex items-center">
                                                 <TrendingUp className="h-3 w-3 mr-1" />
-                                                +12% this month
+                                                {loadingSubscribers ? 'Calculating...' : 'Real-time count'}
                                             </p>
                                         </div>
                                     </div>
@@ -381,7 +467,37 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                     
+                    {/* Subscriber Breakdown Section (Optional) */}
+                    {dashboardStats.totalSubscribers > 0 && !loadingSubscribers && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center">
+                                    <Users className="h-5 w-5 text-purple-600 mr-2" />
+                                    <h3 className="text-lg font-semibold text-gray-900">Subscriber Summary</h3>
+                                </div>
+                                <span className="text-sm text-purple-600 font-medium">
+                                    Total: {dashboardStats.totalSubscribers.toLocaleString()}
+                                </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-purple-600">{domains.length}</p>
+                                    <p className="text-sm text-gray-600">Active Domains</p>
+                                </div>
+                                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-blue-600">
+                                        {domains.length > 0 ? Math.round(dashboardStats.totalSubscribers / domains.length).toLocaleString() : 0}
+                                    </p>
+                                    <p className="text-sm text-gray-600">Avg per Domain</p>
+                                </div>
+                                <div className="text-center p-4 bg-green-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-green-600">Real-time</p>
+                                    <p className="text-sm text-gray-600">Data Source</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
             </div>
         </div>

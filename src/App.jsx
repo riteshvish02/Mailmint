@@ -15,6 +15,8 @@ import DataDomain from "./pages/domain/DataDomain";
 import EditDomain from "./pages/domain/EditDomain";
 import Publish from "./pages/publish/Publish";
 import DomainDailyStats from "./pages/domain/DomainDailyStats";
+// import ListMailSetting from './pages/MailSetting/ListMailSetting'
+import SubscriberList from './pages/subscriber/SubscriberList'
 const App = () => {
   return (
     <>
@@ -42,7 +44,8 @@ const App = () => {
           <Route path="mail-settings" element={<MailSettings/>} />
           <Route path="publish-mail" element={<Publish />} />
           <Route path="domain-daily-stats" element={<DomainDailyStats />} />
-
+            <Route path="mail-setting-list" element={<ListMailSetting />} />
+          <Route path="subscribers" element={<SubscriberList />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>
 
