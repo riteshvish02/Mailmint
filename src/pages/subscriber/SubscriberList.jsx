@@ -247,6 +247,14 @@ const SubscriberList = () => {
     subscriber.subscriberName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
+  // Log Track column for debugging
+  useEffect(() => {
+    if (filteredSubscribers.length > 0) {
+      console.log('Track values:', filteredSubscribers.map(sub => sub.Track || sub.track || ''));
+    }
+  }, [filteredSubscribers]);
+
   // Pagination logic
   const totalPages = Math.ceil(filteredSubscribers.length / subscribersPerPage);
   const paginatedSubscribers = filteredSubscribers.slice(
