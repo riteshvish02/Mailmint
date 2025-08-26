@@ -445,7 +445,7 @@ const SubscriberList = () => {
                 <>
                   <div className="space-y-3">
                     {/* Table Header */}
-                    <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded-lg font-medium text-gray-700 border">
+                    <div className="grid grid-cols-5 gap-4 p-3 bg-gray-50 rounded-lg font-medium text-gray-700 border">
                       <div className="flex items-center">
                         <input
                           type="checkbox"
@@ -457,6 +457,7 @@ const SubscriberList = () => {
                       </div>
                       <div>Name</div>
                       <div>Status</div>
+                      <div>Track</div>
                       <div>Actions</div>
                     </div>
 
@@ -464,7 +465,7 @@ const SubscriberList = () => {
                     {paginatedSubscribers.map((subscriber, index) => (
                       <div 
                         key={subscriber.emailAddress || index}
-                        className={`grid grid-cols-4 gap-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${
+                        className={`grid grid-cols-5 gap-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${
                           subscriber.isOptimistic ? 'bg-blue-50 border-blue-200' : ''
                         }`}
                       >
@@ -527,6 +528,10 @@ const SubscriberList = () => {
                               {subscriber.status}
                             </span>
                           )}
+                        </div>
+                        {/* Track column */}
+                        <div className="flex items-center">
+                          <span className="text-xs text-gray-700 truncate">{subscriber.Track || subscriber.track || ''}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           {editingSubscriber === subscriber.emailAddress ? (
