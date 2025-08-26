@@ -28,7 +28,7 @@ const Publish = () => {
   const [emailLimit, setEmailLimit] = useState('');
   const [publishingDomains, setPublishingDomains] = useState(new Set());
 
-  const { domains, fetchLoading, fetchError,queuedLoad } = useSelector(
+  const { domains, fetchLoading,queuedLoad } = useSelector(
     (state) => state.domain
   );
   console.log(queuedLoad);
@@ -216,7 +216,7 @@ useEffect(() => {
                       Template
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mail Setting
+                      Mail subject
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total Subscribers
@@ -285,7 +285,7 @@ useEffect(() => {
                           <div className="flex items-center">
                             <Mail className="h-4 w-4 text-blue-600 mr-2" />
                             <span className="text-sm text-blue-800 bg-blue-100 px-2 py-1 rounded-md">
-                              {domain.mailSetting.title || "Mail Setting Set"}
+                              {domain.mailSetting.subject || "Mail Setting Set"}
                             </span>
                           </div>
                         ) : (

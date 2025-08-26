@@ -117,6 +117,7 @@ const SubscriberList = () => {
     setEditForm({
       subscriberName: subscriber.subscriberName || '',
       email: subscriber.emailAddress || '',
+      status: subscriber.status || 'active',
     });
   };
 
@@ -133,6 +134,7 @@ const SubscriberList = () => {
       ...subscriber,
       name: editForm.subscriberName, // backend expects 'name'
       email: newEmail,
+      status: editForm.status,
       domain: viewDomain,
     };
     // If email is changed, pass oldEmail as query param
@@ -506,13 +508,25 @@ const SubscriberList = () => {
                           )}
                         </div>
                         <div className="flex items-center">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            subscriber.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {subscriber.status}
-                          </span>
+                          {editingSubscriber === subscriber.emailAddress ? (
+                            <select
+                              name="status"
+                              value={editForm.status || subscriber.status || 'active'}
+                              onChange={handleEditFormChange}
+                              className="text-sm px-2 py-1 border border-gray-300 rounded"
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          ) : (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              subscriber.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {subscriber.status}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           {editingSubscriber === subscriber.emailAddress ? (

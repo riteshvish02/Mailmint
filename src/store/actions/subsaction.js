@@ -154,6 +154,7 @@ export const getSubscribersByDomain = (domain, onSuccess, onError) => async (dis
 
 // Update other subscriber actions to use the correct endpoints if needed
 export const updateSubscriber = (domain, subscriberData, onSuccess, onError) => async (dispatch) => {
+  // console.log("Updating subscriber:", subscriberData);
   dispatch(updateSubscriberRequest());
   
   try {
