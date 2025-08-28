@@ -465,7 +465,7 @@ const SubscriberList = () => {
                       </div>
                       <div>Name</div>
                       <div>Status</div>
-                      <div>Track</div>
+                      {/* <div>Track</div> */}
                       <div>Actions</div>
                     </div>
 
@@ -538,9 +538,9 @@ const SubscriberList = () => {
                           )}
                         </div>
                         {/* Track column */}
-                        <div className="flex items-center">
+                        {/* <div className="flex items-center">
                           <span className="text-xs text-gray-700 truncate">{subscriber.Track || subscriber.track || ''}</span>
-                        </div>
+                        </div> */}
                         <div className="flex items-center space-x-2">
                           {editingSubscriber === subscriber.emailAddress ? (
                             <>

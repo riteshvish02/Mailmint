@@ -15,8 +15,8 @@ import DataDomain from "./pages/domain/DataDomain";
 import EditDomain from "./pages/domain/EditDomain";
 import Publish from "./pages/publish/Publish";
 import DomainDailyStats from "./pages/domain/DomainDailyStats";
-// import ListMailSetting from './pages/MailSetting/ListMailSetting'
 import SubscriberList from './pages/subscriber/SubscriberList'
+import TrackSubscribers from './pages/TrackSubscribers';
 const App = () => {
   return (
     <>
@@ -46,6 +46,7 @@ const App = () => {
           <Route path="domain-daily-stats" element={<DomainDailyStats />} />
             <Route path="mail-setting-list" element={<ListMailSetting />} />
           <Route path="subscribers" element={<SubscriberList />} />
+          <Route path="track-subscribers/:domain" element={<TrackSubscribers />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>
 
