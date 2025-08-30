@@ -56,28 +56,7 @@ export const userRegister = (info,navigate,toast) => async (dispatch) => {
   }
 };
 
-export const userUpdate = (info,id,navigate,toast) => async (dispatch) => {
-  dispatch(isRequest());
-  try {
-    const { data } = await axios.post(`/api/v1/user/update-user/${id}`, info);
 
-    if (data?.SuccessResponse?.success) {
-      const token = data?.SuccessResponse?.data?.accessToken;
-      localStorage.setItem('userToken', token);
-      dispatch(isUserSuccess(data.SuccessResponse.data.user));
-      toast.success("Updated successfully");
-      dispatch(userLogout());
-      navigate('/'); 
-    } else {
-      const errorMessage = data?.ErrorResponse?.message || "Updation failed";
-      dispatch(isUserFail(errorMessage));
-      navigate('/update');
-    }
-  } catch (error) {
-    const errorMessage = error?.ErrorResponse?.message || error.response.data.ErrorResponse.message || error.message || "Updation failed";
-    dispatch(isUserFail(errorMessage));
-  }
-};
 export const userInfoUpdate = (info,id,navigate,toast) => async (dispatch) => {
   dispatch(isRequest());
   try {
@@ -146,7 +125,53 @@ export const googleLogin = (credential, navigate, toast) => async (dispatch) => 
   }
 };
 
+export const userUpdate = (info,id,toast) => async (dispatch) => {
+  dispatch(isRequest());
+  try {
+    const { data } = await axios.post(`/api/v1/user/update-user/${id}`, info,{'Content-Type': 'multipart/form-data'});
 
+    if (data?.SuccessResponse?.success) {
+      dispatch(isUserSuccess(data.SuccessResponse.data));
+      toast.success("Actualizado exitosamente");
+    } else {
+      const errorMessage = data?.ErrorResponse?.message || "Error al actualizar";
+      dispatch(isUserFail(errorMessage));
+    }
+  } catch (error) {
+    const errorMessage =
+      error?.ErrorResponse?.message ||
+      error.response.data.ErrorResponse.message ||
+      error.message ||
+      "Error al actualizar";
+    dispatch(isUserFail(errorMessage));
+  }
+};
+
+export const userResetPass = (info,id,toast,navigate) => async (dispatch) => {
+  dispatch(isRequest());
+  try {
+    const { data } = await axios.post(`/api/v1/user/reset-password/${id}`, info);
+
+    if (data?.SuccessResponse?.success) {
+      // await dispatch(fetchUserProfile(navigate));
+      // await dispatch(userLogout());
+      toast.success("Password updated successfully");
+
+    } else {
+      const errorMessage = data?.ErrorResponse?.message;
+      dispatch(isUserFail(errorMessage));
+
+    }
+  } catch (error) {
+    const errorMessage =
+      error?.ErrorResponse?.message ||
+      error.response.data.ErrorResponse.message ||
+      error.message ||
+      "Password update failed";
+      toast.error(errorMessage);
+    // dispatch(isUserFail(errorMessage));
+  }
+};
 
 export const deleteUserProfile = (id,toast) => async (dispatch) => {
   

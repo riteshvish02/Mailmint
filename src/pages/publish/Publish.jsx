@@ -299,15 +299,20 @@ useEffect(() => {
                       </td>
                      
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {domain.subscribers}
+                        <span className="font-semibold text-gray-900">{domain.subscribers}</span>
+                        {typeof domain.activeSubscribers === 'number' && (
+                          <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                            Active: {domain.activeSubscribers}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          (domain.subscribers - (domain.fromIndex || 0)) > 0 
-                            ? 'bg-orange-100 text-orange-800' 
+                          (domain.emailsRemaining > 0)
+                            ? 'bg-orange-100 text-orange-800'
                             : 'bg-green-100 text-green-800'
                         }`}>
-                          {domain.subscribers - (domain.fromIndex || 0)}
+                          {domain.emailsRemaining}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -432,7 +437,7 @@ useEffect(() => {
           
           {(() => {
             const selectedDomain = domains.find(d => d._id === selectedDomainId);
-            const remainingSubscribers = selectedDomain ? (selectedDomain.subscribers - (selectedDomain.fromIndex || 0)) : 0;
+            const remainingSubscribers = selectedDomain ? selectedDomain.emailsRemaining : 0;
             
             return (
               <>
@@ -455,7 +460,12 @@ useEffect(() => {
                   <input
                     type="number"
                     value={emailLimit}
-                    onChange={(e) => setEmailLimit(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val || parseInt(val) <= remainingSubscribers) {
+                        setEmailLimit(val);
+                      }
+                    }}
                     placeholder={`e.g. ${Math.min(2000, remainingSubscribers)} (leave empty for all remaining)`}
                     min="1"
                     max={remainingSubscribers}

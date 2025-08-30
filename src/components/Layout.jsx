@@ -54,6 +54,7 @@ const Layout = () => {
         { name: 'Mail Subject List', icon: Send, path: '/mail-setting-list' },
         { name: 'Publish Mail List', icon: Send, path: '/publish-mail' },
         { name: 'Domain Daily Stats', icon: FileText, path: '/domain-daily-stats' },
+        { name: 'Update Password', icon: Settings, path: '/userprofile' },
     ];
 
     return (

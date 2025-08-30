@@ -18,9 +18,8 @@ const domainSchema = z.object({
     .email('Please enter a valid email address'),
   description: z
     .string()
-    .min(1, 'Description is required')
-    .min(10, 'Description must be at least 10 characters long')
     .max(500, 'Description must be less than 500 characters')
+    .optional()
 });
 
 const AddDomain = () => {
@@ -166,7 +165,7 @@ const AddDomain = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description*</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
               name="description"
               value={formData.description}

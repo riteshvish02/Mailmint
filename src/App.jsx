@@ -17,6 +17,7 @@ import Publish from "./pages/publish/Publish";
 import DomainDailyStats from "./pages/domain/DomainDailyStats";
 import SubscriberList from './pages/subscriber/SubscriberList'
 import TrackSubscribers from './pages/TrackSubscribers';
+import UserProfile from './pages/Profile/UserProfile'
 const App = () => {
   return (
     <>
@@ -32,6 +33,7 @@ const App = () => {
             </AdminProtected>
           }
         >
+
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="add-subscriber" element={<SubscriberManager />} />
           <Route path="add-domain" element={<AddDomain />} />
@@ -47,6 +49,7 @@ const App = () => {
             <Route path="mail-setting-list" element={<ListMailSetting />} />
           <Route path="subscribers" element={<SubscriberList />} />
           <Route path="track-subscribers/:domain" element={<TrackSubscribers />} />
+          <Route path="userprofile" element={<UserProfile />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>
 
