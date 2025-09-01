@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const baseURL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
+  ? 'http://localhost:3001'
   : 'https://wjpms.in';
 const Instance = axios.create({
     baseURL,
