@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const baseURL = window.location.hostname === 'localhost'
   ? 'http://localhost:5000'
-  : 'https://email-marketing-tkkj.onrender.com';
+  : 'https://wjpms.in/api';
 const Instance = axios.create({
     baseURL,
     withCredentials: true,
