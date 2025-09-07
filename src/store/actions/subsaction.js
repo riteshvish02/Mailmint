@@ -23,6 +23,38 @@ import {
   isUserFail, 
 } from "../reducers/usersReducer";
 
+// Bulk Inactive Subscribers Action
+export const bulkInactiveSubscribers = (domain, subscriberEmails, onSuccess, onError) => async (dispatch) => {
+  dispatch(bulkDeleteRequest()); // Reuse bulkDelete loading state
+  try {
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+      dispatch(isUserFail("Please login to continue"));
+      return;
+    }
+    const { data } = await axios.post(`/api/v1/subscribers/domains/${domain}/bulk-inactive`, { emails: subscriberEmails }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (data?.SuccessResponse?.success) {
+      dispatch(bulkDeleteSuccess({ subscriberEmails })); // Remove from UI
+      onSuccess?.(data.SuccessResponse.data);
+    } else {
+      const errorMessage = data?.ErrorResponse?.message || "Failed to inactivate subscribers";
+      dispatch(bulkDeleteFail(errorMessage));
+      onError?.(errorMessage);
+    }
+  } catch (error) {
+    const errorMessage =
+      error?.response?.data?.ErrorResponse?.message ||
+      error?.response?.data?.message ||
+      "Something went wrong";
+    dispatch(bulkDeleteFail(errorMessage));
+    onError?.(errorMessage);
+  }
+};
+
 // Add Single Subscriber Action - Updated with optimistic update and refetch
 export const addSubscriber = (subscriberData, onSuccess, onError, shouldRefetchDomain = null) => async (dispatch) => {
   dispatch(addSubscriberRequest());

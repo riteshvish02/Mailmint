@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X } from 'lucide-react';
 import { fetchDomains } from "../../store/actions/domainaction";
@@ -14,12 +15,43 @@ import {
   addSubscriberOptimistic,
   removeOptimisticSubscriber
 } from "../../store/reducers/subsReducer";
+import { bulkInactiveSubscribers } from "../../store/actions/subsaction";
 import { useDispatch, useSelector } from 'react-redux';
 
 const SubscriberList = () => {
   const [viewDomain, setViewDomain] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubscribers, setSelectedSubscribers] = useState(new Set());
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    if (filteredSubscribers.length === 0) {
+      alert('No subscribers to export!');
+      return;
+    }
+    const dataToExport = filteredSubscribers.map(sub => ({
+      Email: sub.emailAddress,
+      Name: sub.subscriberName,
+      Status: sub.status,
+      // Track: sub.Track || sub.track || '',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Subscribers');
+    // Use XLSX.write to get a Blob and trigger download manually
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${viewDomain || 'subscribers'}-list.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 0);
+  };
     
   const navigate = useNavigate();
 
@@ -229,6 +261,25 @@ const SubscriberList = () => {
     }
   };
 
+    // Bulk Inactive logic
+    const handleBulkInactive = () => {
+      if (selectedSubscribers.size === 0) return;
+      if (window.confirm(`Are you sure you want to mark ${selectedSubscribers.size} selected subscribers as inactive?`)) {
+        dispatch(bulkInactiveSubscribers(
+          viewDomain,
+          Array.from(selectedSubscribers),
+          () => {
+            dispatch(getSubscribersByDomain(viewDomain));
+            setSelectedSubscribers(new Set());
+            alert(`Successfully marked ${selectedSubscribers.size} subscribers as inactive!`);
+          },
+          (error) => {
+            alert('Bulk inactive failed: ' + error);
+          }
+        ));
+      }
+    };
+
   // Support both array and paginated object response for domainSubscribers
   let safeDomainSubscribers = [];
   if (Array.isArray(domainSubscribers)) {
@@ -364,6 +415,15 @@ const SubscriberList = () => {
                   </h2>
                 </div>
                 <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleExportExcel}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm flex items-center mr-2"
+                    disabled={filteredSubscribers.length === 0}
+                    title="Export filtered subscribers to Excel"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Export to Excel
+                  </button>
                   <div className="text-sm text-gray-600">
                     Total: {filteredSubscribers.length} {searchTerm && `(filtered from ${safeDomainSubscribers?.length || 0})`}
                   </div>
@@ -402,6 +462,15 @@ const SubscriberList = () => {
                       <Trash2 className="h-4 w-4 mr-1" />
                       Delete Selected ({selectedSubscribers.size})
                     </button>
+                    )}
+                    {selectedSubscribers.size > 0 && (
+                      <button
+                        onClick={handleBulkInactive}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm flex items-center ml-2"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Mark Inactive ({selectedSubscribers.size})
+                      </button>
                   )}
                 </div>
               )}
