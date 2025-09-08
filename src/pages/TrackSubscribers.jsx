@@ -22,15 +22,17 @@ const TrackSubscribers = () => {
     bounced: 0,
     unsubscribed: 0
   });
+  // Filter state
+  const [trackFilter, setTrackFilter] = useState('all');
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashboardError, setDashboardError] = useState('');
 
-  const fetchSubscribers = async (pageNum = 1, perPageNum = 20) => {
+  const fetchSubscribers = async (pageNum = 1, perPageNum = 20, filter = trackFilter) => {
     if (!domain) return;
     setLoading(true);
     setError('');
     try {
-      const res = await axios.get(`/api/v1/track-subscribers/${domain}?perPage=${perPageNum}&page=${pageNum}`);
+      const res = await axios.get(`/api/v1/track-subscribers/${domain}?perPage=${perPageNum}&page=${pageNum}&filter=${filter}`);
       setSubscribers(res.data.subscribers);
       setTotalPages(res.data.totalPages);
       setPage(res.data.page);
@@ -43,13 +45,13 @@ const TrackSubscribers = () => {
   };
 
   const handlePageChange = (newPage) => {
-    fetchSubscribers(newPage, perPage);
+    fetchSubscribers(newPage, perPage, trackFilter);
   };
 
   useEffect(() => {
-    if (domain) fetchSubscribers(1, perPage);
+    if (domain) fetchSubscribers(1, perPage, trackFilter);
     // eslint-disable-next-line
-  }, [domain, perPage]);
+  }, [domain, perPage, trackFilter]);
 
     // Fetch dashboard summary
     useEffect(() => {
@@ -73,6 +75,9 @@ const TrackSubscribers = () => {
         })
         .finally(() => setDashboardLoading(false));
     }, [domain]);
+
+  // No need to filter on frontend, backend handles it
+  const filteredSubscribers = subscribers;
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
@@ -132,6 +137,20 @@ const TrackSubscribers = () => {
             <option key={num} value={num}>{num} per page</option>
           ))}
         </select>
+        {/* Filter dropdown */}
+        <select
+          value={trackFilter}
+          onChange={e => setTrackFilter(e.target.value)}
+          className="border px-2 py-1 rounded"
+        >
+          <option value="all">All</option>
+          <option value="delivered">Delivered</option>
+          <option value="opened">Opened</option>
+          <option value="clicked">Clicked</option>
+          <option value="bounced">Bounced</option>
+          <option value="failed">Failed</option>
+          <option value="unsubscribed">Unsubscribed</option>
+        </select>
       </div>
       {loading ? (
         <div>Loading...</div>
@@ -149,10 +168,10 @@ const TrackSubscribers = () => {
               </tr>
             </thead>
             <tbody>
-              {subscribers.length === 0 ? (
+              {filteredSubscribers.length === 0 ? (
                 <tr><td colSpan={4} className="text-center py-4">No data</td></tr>
               ) : (
-                subscribers.map((sub, idx) => (
+                filteredSubscribers.map((sub, idx) => (
                   <tr key={sub.Email + idx}>
                     <td className="border px-2 py-1">{sub.Email}</td>
                     <td className="border px-2 py-1">{sub.Name}</td>
