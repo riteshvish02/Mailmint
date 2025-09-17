@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const baseURL = window.location.hostname === 'localhost'
   ? 'http://localhost:3001'
-  : 'http://91.108.110.205';
+  : 'http://31.97.235.13/api';
 const Instance = axios.create({
     baseURL,
     withCredentials: true,
