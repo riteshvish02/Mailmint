@@ -27,49 +27,52 @@ const DomainsList = () => {
 
     if (fetchLoading && domains.length === 0) {
         return (
-            <div className="p-6 flex justify-center items-center min-h-64">
+            <div className="p-3 sm:p-6 flex justify-center items-center min-h-64">
                 <div className="flex items-center gap-2 text-gray-600">
-                    <RefreshCw className="h-6 w-6 animate-spin" />
-                    <span>Loading domains...</span>
+                    <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
+                    <span className="text-sm sm:text-base">Loading domains...</span>
                 </div>
             </div>
         );
     }
 
     return domains && (
-        <div className="p-4 md:p-6">
-            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                        <Database className="h-6 w-6 mr-2 text-blue-600" />
-                        Domains List
-                        <span className="ml-2 text-sm font-normal text-gray-500">
-                            ({domains.length} total)
-                        </span>
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Manage your email sending domains and their verification status
-                    </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    
-                    <div className="flex gap-2">
-                        <button 
-                            onClick={handleRefresh}
-                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg flex items-center hover:bg-gray-200 transition-colors"
-                            disabled={fetchLoading}
-                        >
-                            <RefreshCw className={`h-4 w-4 mr-2 ${fetchLoading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Refresh</span>
-                        </button>
-                        <button
-                            onClick={() => navigate('/add-domain')}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition-colors"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Add Domain</span>
-                            <span className="sm:hidden">Add</span>
-                        </button>
+        <div className="p-3 sm:p-4 md:p-6">
+            <div className="mb-4 sm:mb-6">
+                <div className="flex flex-col space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex-1">
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex flex-col sm:flex-row sm:items-center">
+                                <div className="flex items-center">
+                                    <Database className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-blue-600" />
+                                    <span>Domains List</span>
+                                </div>
+                                <span className="text-sm font-normal text-gray-500 mt-1 sm:mt-0 sm:ml-2">
+                                    ({domains.length} total)
+                                </span>
+                            </h1>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                                Manage your email sending domains and their verification status
+                            </p>
+                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <button 
+                                onClick={handleRefresh}
+                                className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-3 sm:px-4 py-2 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors text-sm"
+                                disabled={fetchLoading}
+                            >
+                                <RefreshCw className={`h-4 w-4 ${fetchLoading ? 'animate-spin' : ''} sm:mr-2`} />
+                                <span className="hidden sm:inline ml-2 sm:ml-0">Refresh</span>
+                            </button>
+                            <button
+                                onClick={() => navigate('/add-domain')}
+                                className="flex-1 sm:flex-none bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-colors text-sm"
+                            >
+                                <Plus className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline ml-2 sm:ml-0">Add Domain</span>
+                                <span className="sm:hidden ml-2">Add</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -93,60 +96,104 @@ const DomainsList = () => {
             )} */}
 
             {domains.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-                    <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No domains found</h3>
-                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+                    <Database className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No domains found</h3>
+                    <p className="text-sm sm:text-base text-gray-500 mb-6 max-w-md mx-auto px-2">
                         You haven't added any domains yet. Add your first domain to start sending emails.
                     </p>
                     <button 
                         onClick={() => navigate('/add-domain')}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center mx-auto"
+                        className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center mx-auto text-sm sm:text-base"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Add First Domain
                     </button>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    {/* Mobile Card View */}
+                    <div className="block sm:hidden bg-white">
+                        <div className="divide-y divide-gray-100">
+                            {domains.map((domain) => (
+                                <div key={domain._id} className="p-4 bg-white hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="h-10 w-10 flex items-center justify-center bg-blue-50 rounded-lg">
+                                                <Database className="h-5 w-5 text-blue-600" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-medium text-gray-900 truncate">{domain.domain}</h3>
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                    domain.status === 'verified'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : domain.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                        : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                                                </span>
+                                            </div>
+                                            <div className="mt-1">
+                                                <p className="text-sm text-gray-600 truncate">{domain.senderMail}</p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Added on {new Date(domain.createdAt).toLocaleDateString()}
+                                                </p>
+                                                {domain.description && (
+                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                                        {domain.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Domain
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Email
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Status
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Description
                                     </th>
-                                    
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {domains.map((domain) => (
                                     <tr key={domain._id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-4 lg:px-6 py-4">
                                             <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-blue-50 rounded-lg">
-                                                    <Database className="h-5 w-5 text-blue-600" />
+                                                <div className="flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10 flex items-center justify-center bg-blue-50 rounded-lg">
+                                                    <Database className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
                                                 </div>
-                                                <div className="ml-4">
-                                                    <div className="font-medium text-gray-900">{domain.domain}</div>
-                                                    <div className="text-gray-500 text-sm">Added on {new Date(domain.createdAt).toLocaleDateString()}</div>
+                                                <div className="ml-3 lg:ml-4">
+                                                    <div className="font-medium text-gray-900 text-sm lg:text-base">{domain.domain}</div>
+                                                    <div className="text-gray-500 text-xs lg:text-sm">Added on {new Date(domain.createdAt).toLocaleDateString()}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-gray-900">{domain.senderMail}</div>
+                                        <td className="px-4 lg:px-6 py-4">
+                                            <div className="text-gray-900 text-sm lg:text-base truncate max-w-[150px] lg:max-w-none" title={domain.senderMail}>
+                                                {domain.senderMail}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-md font-medium ${
+                                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-medium ${
                                                 domain.status === 'verified'
                                                     ? 'bg-green-100 text-green-800'
                                                     : domain.status === 'pending'
@@ -156,37 +203,34 @@ const DomainsList = () => {
                                                 {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-gray-900 line-clamp-2 max-w-xs" title={domain.description}>
+                                        <td className="hidden lg:table-cell px-6 py-4">
+                                            <div className="text-gray-900 line-clamp-2 max-w-xs text-sm" title={domain.description}>
                                                 {domain.description || 'No description'}
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                             
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-                        <div className="flex-1 flex justify-between items-center">
-                            <div>
-                                <p className="text-sm text-gray-700">
+                    <div className="bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 border-t border-gray-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                            <div className="text-center sm:text-left">
+                                <p className="text-xs sm:text-sm text-gray-700">
                                     Showing <span className="font-medium">1</span> to <span className="font-medium">{domains.length}</span> of{' '}
                                     <span className="font-medium">{domains.length}</span> domains
                                 </p>
                             </div>
-                            <div className="flex space-x-2">
+                            <div className="flex justify-center sm:justify-end space-x-2">
                                 <button
                                     disabled
-                                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                    className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     Previous
                                 </button>
                                 <button
                                     disabled
-                                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                    className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     Next
                                 </button>

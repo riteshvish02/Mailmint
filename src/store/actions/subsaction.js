@@ -140,8 +140,8 @@ export const bulkUploadSubscribers = (formData, onSuccess, onError, shouldRefetc
     onError?.(errorMessage);
   }
 };
-// Updated getSubscribersByDomain action to use the correct endpoint
-export const getSubscribersByDomain = (domain, onSuccess, onError) => async (dispatch) => {
+// Updated getSubscribersByDomain action to support pagination
+export const getSubscribersByDomain = (domain, params = {}, onSuccess, onError) => async (dispatch) => {
   dispatch(getSubscribersByDomainRequest());
   
   try {
@@ -152,8 +152,18 @@ export const getSubscribersByDomain = (domain, onSuccess, onError) => async (dis
       return;
     }
 
-    // Updated endpoint to match your router: /domains/:domain/subscribers/all
-    const { data } = await axios.get(`/api/v1/subscribers/domains/${domain}/subscribers/all`, {
+    // Build query parameters for pagination and search
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString 
+      ? `/api/v1/subscribers/domains/${domain}/subscribers/all?${queryString}`
+      : `/api/v1/subscribers/domains/${domain}/subscribers/all`;
+
+    const { data } = await axios.get(endpoint, {
       headers: {
         Authorization: `Bearer ${token}`
       }

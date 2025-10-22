@@ -97,10 +97,16 @@ export const fetchUserProfile = () => async (dispatch) => {
       dispatch(isUserSuccess(data.SuccessResponse.data));
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Internal server Error";
+    
       dispatch(isUserFail(errorMessage));
     }
   } catch (error) {
-    const errorMessage = error?.ErrorResponse?.message || error.response.data.ErrorResponse.message || error.message ;
+    const errorMessage =
+  error?.ErrorResponse?.message ||
+  error?.response?.data?.ErrorResponse?.message ||
+  error.message ||
+  "Login failed";
+
     dispatch(isUserFail(errorMessage));
   }
 };
