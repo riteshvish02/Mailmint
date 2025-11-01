@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X } from 'lucide-react';
+import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X, Download } from 'lucide-react';
 import { fetchDomains } from "../../store/actions/domainaction";
 import { 
   getSubscribersByDomain, 
@@ -17,6 +17,7 @@ import {
 } from "../../store/reducers/subsReducer";
 import { bulkInactiveSubscribers } from "../../store/actions/subsaction";
 import { useDispatch, useSelector } from 'react-redux';
+import axios from '../../utils/Axios';
 
 const SubscriberList = () => {
   const [viewDomain, setViewDomain] = useState('');
@@ -394,6 +395,36 @@ const SubscriberList = () => {
     }
   }, [viewDomain]);
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadSubscribers = async () => {
+    if (!viewDomain) {
+      alert('Please select a domain first');
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const response = await axios.get(`/api/v1/track-subscribers/${viewDomain}/export`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${viewDomain}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-6 lg:py-10 px-3 sm:px-4">
       <div className="max-w-7xl mx-auto">
@@ -507,6 +538,23 @@ const SubscriberList = () => {
                       <span className="sm:hidden">Export</span>
                     </button>
                     <button
+                      onClick={handleDownloadSubscribers}
+                      disabled={isDownloading}
+                      className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-1" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {isDownloading ? 'Downloading...' : 'Download All Subscribers'}
+                      </span>
+                      <span className="sm:hidden">
+                        {isDownloading ? 'Downloading' : 'Download'}
+                      </span>
+                    </button>
+                    <button
                       onClick={handleAddSubscriber}
                       className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center"
                     >
@@ -534,7 +582,7 @@ const SubscriberList = () => {
                         type="checkbox"
                         checked={filteredSubscribers.length > 0 && filteredSubscribers.every(sub => selectedSubscribers.has(sub.emailAddress))}
                         onChange={handleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
                       />
                       <span className="ml-2 text-xs sm:text-sm text-gray-700">
                         Select All ({selectedSubscribers.size} selected)

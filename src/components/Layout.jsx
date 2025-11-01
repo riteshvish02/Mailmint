@@ -80,7 +80,7 @@ const Layout = () => {
                 fixed lg:fixed
                 w-64 bg-white shadow-sm border-r border-gray-200 
                 h-full overflow-y-auto
-                z-50 lg:z-auto
+                z-[9999] lg:z-[9999999]
                 transition-transform duration-300 ease-in-out
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>

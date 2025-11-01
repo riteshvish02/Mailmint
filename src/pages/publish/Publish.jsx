@@ -143,7 +143,7 @@ useEffect(() => {
     <>
     {domains && (
       <div className="p-3 sm:p-4 md:p-6 bg-gray-50 sm:bg-gray-100 min-h-screen">
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 ">
           <div className="flex flex-col space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
               <div className="flex-1">
@@ -205,7 +205,7 @@ useEffect(() => {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden w-fit">
             
             {/* Mobile Card View */}
             <div className="block xl:hidden">
@@ -394,7 +394,7 @@ useEffect(() => {
             </div>
             
             {/* Desktop Table View */}
-            <div className="hidden xl:block overflow-x-auto">
+            <div className="hidden xl:block w-fit">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
