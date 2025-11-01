@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X, Download } from 'lucide-react';
+import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X } from 'lucide-react';
 import { fetchDomains } from "../../store/actions/domainaction";
 import { 
   getSubscribersByDomain, 
@@ -395,33 +395,32 @@ const SubscriberList = () => {
     }
   }, [viewDomain]);
 
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  const handleDownloadSubscribers = async () => {
+  // Function to download the entire domain subscriber list
+  const handleDownloadDomainSubscribers = async () => {
     if (!viewDomain) {
-      alert('Please select a domain first');
+      alert('Please select a domain first.');
       return;
     }
 
-    setIsDownloading(true);
     try {
-      const response = await axios.get(`/api/v1/track-subscribers/${viewDomain}/export`, {
+      const response = await axios.get(`/api/v1/domain/${viewDomain}/export`, {
         responseType: 'blob',
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([response.data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${viewDomain}.xlsx`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 0);
     } catch (error) {
-      console.error('Error downloading file:', error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsDownloading(false);
+      console.error('Error downloading the file:', error);
+      alert('An error occurred while downloading the file.');
     }
   };
 
@@ -538,29 +537,22 @@ const SubscriberList = () => {
                       <span className="sm:hidden">Export</span>
                     </button>
                     <button
-                      onClick={handleDownloadSubscribers}
-                      disabled={isDownloading}
-                      className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center"
-                    >
-                      {isDownloading ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-1" />
-                      )}
-                      <span className="hidden sm:inline">
-                        {isDownloading ? 'Downloading...' : 'Download All Subscribers'}
-                      </span>
-                      <span className="sm:hidden">
-                        {isDownloading ? 'Downloading' : 'Download'}
-                      </span>
-                    </button>
-                    <button
                       onClick={handleAddSubscriber}
                       className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       <span className="hidden sm:inline">Add Subscriber</span>
                       <span className="sm:hidden">Add</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadDomainSubscribers}
+                      className="px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs sm:text-sm flex items-center justify-center"
+                      disabled={!viewDomain}
+                      title="Download entire domain subscriber list"
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Download Domain List</span>
+                      <span className="sm:hidden">Download</span>
                     </button>
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
@@ -582,7 +574,7 @@ const SubscriberList = () => {
                         type="checkbox"
                         checked={filteredSubscribers.length > 0 && filteredSubscribers.every(sub => selectedSubscribers.has(sub.emailAddress))}
                         onChange={handleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <span className="ml-2 text-xs sm:text-sm text-gray-700">
                         Select All ({selectedSubscribers.size} selected)
@@ -970,7 +962,7 @@ const SubscriberList = () => {
           </div>
         )}
 
-  {/* Add Subscriber Modal removed. */}
+        {/* Add Subscriber Modal removed. */}
       </div>
     </div>
   );
