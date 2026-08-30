@@ -97,8 +97,18 @@ const LoginForm = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  const demoCredentials = {
+    email: 'test@frimflix.com',
+    password: 'test123',
+  };
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleUseDemoCredentials = () => {
+    setFormData(demoCredentials);
+    setErrors({});
   };
 
   const handleChange = (e) => {
@@ -165,6 +175,33 @@ const LoginForm = () => {
     <div className="max-w-md w-full p-6 bg-white rounded-xl shadow-lg">
       <div className="text-center mb-6">
         <h2 className="text-3xl font-bold text-blue-700">Admin Login</h2>
+      </div>
+
+      <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div>
+            <p className="text-sm font-semibold text-green-800">Try it for free</p>
+            <p className="text-xs text-green-700">Use the demo admin credentials</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleUseDemoCredentials}
+            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
+          >
+            Fill demo
+          </button>
+        </div>
+
+        <div className="space-y-2 text-sm text-green-900">
+          <div className="flex items-center justify-between gap-4 rounded-md bg-white/60 px-2 py-1.5">
+            <span className="font-medium">Email</span>
+            <span className="font-mono text-xs break-all">{demoCredentials.email}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-md bg-white/60 px-2 py-1.5">
+            <span className="font-medium">Password</span>
+            <span className="font-mono text-xs break-all">{demoCredentials.password}</span>
+          </div>
+        </div>
       </div>
 
       {errors.general && (
