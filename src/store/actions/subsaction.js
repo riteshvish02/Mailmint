@@ -197,6 +197,7 @@ export const getSubscribersByDomain = (domain, params = {}, onSuccess, onError) 
     if (params.page) queryParams.append('page', params.page);
     if (params.limit) queryParams.append('limit', params.limit);
     if (params.search) queryParams.append('search', params.search);
+    if (params.status && params.status !== 'all') queryParams.append('status', params.status);
     
     const queryString = queryParams.toString();
     const endpoint = queryString 
