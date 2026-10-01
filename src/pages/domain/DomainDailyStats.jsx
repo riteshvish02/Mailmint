@@ -4,7 +4,8 @@ import { fetchDomains } from "../../store/actions/domainaction";
 
 const DomainDailyStats = () => {
   const dispatch = useDispatch();
-  const { domains, fetchLoading } = useSelector((state) => state.domain);
+  const { domains = [], fetchLoading } = useSelector((state) => state.domain);
+  const domainList = Array.isArray(domains) ? domains : [];
   const [today, setToday] = useState(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -38,9 +39,9 @@ const DomainDailyStats = () => {
           
           {/* Mobile Card View */}
           <div className="block lg:hidden">
-            {domains && domains.length > 0 ? (
+            {domainList && domainList.length > 0 ? (
               <div className="divide-y divide-gray-100">
-                {domains.map(domain => {
+                {domainList.map(domain => {
                   const todayEntry = domain.emailSentHistory?.find(h => {
                     const d = new Date(h.date);
                     d.setHours(0,0,0,0);
@@ -132,8 +133,8 @@ const DomainDailyStats = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {domains && domains.length > 0 ? (
-                  domains.map(domain => {
+                {domainList && domainList.length > 0 ? (
+                  domainList.map(domain => {
                     const todayEntry = domain.emailSentHistory?.find(h => {
                       const d = new Date(h.date);
                       d.setHours(0,0,0,0);

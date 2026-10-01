@@ -23,7 +23,14 @@ export const domainSlice = createSlice({
     },
     isDomainSuccess: (state, action) => {
       state.loading = false;
-      state.domains = action.payload;
+      if (Array.isArray(action.payload)) {
+        state.domains = action.payload;
+      } else if (action.payload && typeof action.payload === 'object') {
+        state.domain = action.payload;
+        const currentDomains = Array.isArray(state.domains) ? state.domains : [];
+        const exists = currentDomains.some(d => d._id && d._id === action.payload._id);
+        state.domains = exists ? currentDomains : [action.payload, ...currentDomains];
+      }
       state.error = null;
     },
     isDomainFail: (state, action) => {
@@ -38,7 +45,7 @@ export const domainSlice = createSlice({
     },
     fetchDomainsSuccess: (state, action) => {
       state.fetchLoading = false;
-      state.domains = action.payload;
+      state.domains = Array.isArray(action.payload) ? action.payload : [];
       state.fetchError = null;
     },
    
@@ -50,6 +57,19 @@ export const domainSlice = createSlice({
     fetchDomainsFail: (state, action) => {
       state.fetchLoading = false;
       state.fetchError = action.payload;
+    },
+    updateDomainProgress: (state, action) => {
+      const { domainId, domainName, emailsSent, emailsFailed, emailsTotal, emailsRemaining, sendingInProgress } = action.payload;
+      const target = state.domains.find(
+        (d) => (domainId && d._id === domainId) || (domainName && d.domain === domainName)
+      );
+      if (target) {
+        if (typeof emailsSent === 'number') target.emailsSent = emailsSent;
+        if (typeof emailsFailed === 'number') target.emailsFailed = emailsFailed;
+        if (typeof emailsTotal === 'number') target.emailsTotal = emailsTotal;
+        if (typeof emailsRemaining === 'number') target.emailsRemaining = emailsRemaining;
+        if (typeof sendingInProgress === 'boolean') target.sendingInProgress = sendingInProgress;
+      }
     },
     setQueuedLoad: (state, action) => {
       state.queuedLoad = true;
@@ -87,7 +107,8 @@ export const {
   fetchSingleDomainSuccess,
   isSuccess,
   setQueuedLoad,
-  clearQueuedLoad
+  clearQueuedLoad,
+  updateDomainProgress
 } = domainSlice.actions;
 
 export default domainSlice.reducer;

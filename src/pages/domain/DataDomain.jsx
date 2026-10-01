@@ -18,9 +18,10 @@ const DataDomain = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { domains, fetchLoading, fetchError } = useSelector(
+  const { domains = [], fetchLoading, fetchError } = useSelector(
     (state) => state.domain
   );
+  const domainList = Array.isArray(domains) ? domains : [];
   console.log(domains);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ const DataDomain = () => {
     navigate(`/domain-edit/${domainId}`);
   };
 
-  if (fetchLoading && domains.length === 0) {
+  if (fetchLoading && domainList.length === 0) {
     return (
       <div className="p-3 sm:p-6 flex justify-center items-center min-h-64">
         <div className="flex items-center gap-2 text-gray-600">
@@ -98,7 +99,7 @@ const DataDomain = () => {
           </div>
         </div>
 
-        {domains.length === 0 ? (
+        {domainList.length === 0 ? (
           <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
             <Database className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
@@ -121,7 +122,7 @@ const DataDomain = () => {
             {/* Mobile Card View */}
             <div className="block lg:hidden bg-white">
               <div className="divide-y divide-gray-100">
-                {domains.map((domain) => (
+                {domainList.map((domain) => (
                   <div key={domain._id} className="p-4 bg-white hover:bg-gray-50 transition-colors">
                     <div className="space-y-3">
                       {/* Header with domain and status */}
@@ -239,7 +240,7 @@ const DataDomain = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {domains.map((domain) => (
+                  {domainList.map((domain) => (
                     <tr
                       key={domain._id}
                       className="hover:bg-gray-50 transition-colors"

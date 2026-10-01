@@ -8,14 +8,20 @@ import { addDomain } from '../../store/actions/domainaction';
 import { clearDomainError } from '../../store/reducers/domainReducer';
 
 const domainSchema = z.object({
-  domain: z
-    .string()
-    .min(1, 'Domain name is required')
-    .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.([a-zA-Z]{2,}\.?)+$/, 'Please enter a valid domain name (e.g., example.com)'),
   senderEmail: z
     .string()
     .min(1, 'Sender email is required')
     .email('Please enter a valid email address'),
+  senderName: z
+    .string()
+    .max(100, 'Sender name must be less than 100 characters')
+    .optional(),
+  domain: z
+    .string()
+    .optional()
+    .refine(val => !val || !val.trim() || /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.([a-zA-Z]{2,}\.?)+$/.test(val.trim()), {
+      message: 'Please enter a valid domain name (e.g., example.com) or leave blank'
+    }),
   description: z
     .string()
     .max(500, 'Description must be less than 500 characters')
@@ -26,6 +32,7 @@ const AddDomain = () => {
   const [formData, setFormData] = useState({
     domain: '',
     senderEmail: '',
+    senderName: '',
     description: ''
   });
   
@@ -75,6 +82,7 @@ const AddDomain = () => {
     setFormData({
       domain: '',
       senderEmail: '',
+      senderName: '',
       description: ''
     });
     setErrors({});
@@ -123,44 +131,78 @@ const AddDomain = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold flex items-center text-gray-800 mb-6">
-        <Plus className="h-6 w-6 mr-2" />
-        Add Domain Details
+      <h1 className="text-2xl font-bold flex items-center text-gray-800 mb-2">
+        <Plus className="h-6 w-6 mr-2 text-blue-600" />
+        Add Sender / Domain
       </h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Configure your email sending channel via Brevo.
+      </p>
+
+      {/* Helpful banner for users without a custom domain */}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+        <div className="text-blue-600 font-bold text-lg mt-0.5">💡</div>
+        <div className="text-sm text-blue-800">
+          <p className="font-semibold">No Custom Domain? No Problem!</p>
+          <p className="mt-0.5 text-blue-700">
+            You can leave <strong>Domain Name blank</strong> and just provide your <strong>Sender Email</strong> (like personal Gmail, Yahoo, or Outlook). Brevo will send a verification link to that email. Once confirmed in your inbox, you can start sending campaigns immediately!
+          </p>
+        </div>
+      </div>
 
       <div className="bg-white border rounded-lg shadow-sm p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Domain Name*</label>
-              <input
-                type="text"
-                name="domain"
-                value={formData.domain}
-                onChange={handleChange}
-                placeholder="example.com"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.domain ? 'border-red-500' : 'border-gray-300'
-                }`}
-                required
-              />
-              {errors.domain && <p className="mt-1 text-sm text-red-600">{errors.domain}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sender Email*</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sender Email <span className="text-red-500">*</span>
+              </label>
               <input
                 type="email"
                 name="senderEmail"
                 value={formData.senderEmail}
                 onChange={handleChange}
-                placeholder="admin@example.com"
+                placeholder="yourname@gmail.com"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.senderEmail ? 'border-red-500' : 'border-gray-300'
                 }`}
                 required
               />
+              <span className="text-xs text-gray-400 mt-1 block">Brevo verification link will be sent here</span>
               {errors.senderEmail && <p className="mt-1 text-sm text-red-600">{errors.senderEmail}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sender Name <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                name="senderName"
+                value={formData.senderName}
+                onChange={handleChange}
+                placeholder="e.g. Rohit Sharma"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-xs text-gray-400 mt-1 block">Display name shown in subscribers' inbox</span>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Domain Name <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                name="domain"
+                value={formData.domain}
+                onChange={handleChange}
+                placeholder="example.com (leave blank if none)"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.domain ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <span className="text-xs text-gray-400 mt-1 block">Only if you own and manage custom DNS</span>
+              {errors.domain && <p className="mt-1 text-sm text-red-600">{errors.domain}</p>}
             </div>
           </div>
 
@@ -170,12 +212,11 @@ const AddDomain = () => {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Enter a detailed description about this domain..."
-              rows={4}
+              placeholder="Enter a description for this sender channel (e.g. Weekly Newsletter sender)..."
+              rows={3}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
-              required
             />
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">{errors.description}</p>

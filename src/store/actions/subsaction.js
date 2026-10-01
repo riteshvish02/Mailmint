@@ -17,15 +17,19 @@ import {
   deleteSubscriberFail,
   bulkDeleteRequest,
   bulkDeleteSuccess,
-  bulkDeleteFail
+  bulkDeleteFail,
+  bulkStatusUpdateRequest,
+  bulkStatusUpdateSuccess,
+  bulkStatusUpdateFail,
 } from "../reducers/subsReducer";
 import { 
   isUserFail, 
 } from "../reducers/usersReducer";
+import { fetchDomains } from "./domainaction";
 
 // Bulk Inactive Subscribers Action
 export const bulkInactiveSubscribers = (domain, subscriberEmails, onSuccess, onError) => async (dispatch) => {
-  dispatch(bulkDeleteRequest()); // Reuse bulkDelete loading state
+  dispatch(bulkStatusUpdateRequest());
   try {
     const token = localStorage.getItem('userToken');
     if (!token) {
@@ -38,11 +42,12 @@ export const bulkInactiveSubscribers = (domain, subscriberEmails, onSuccess, onE
       }
     });
     if (data?.SuccessResponse?.success) {
-      dispatch(bulkDeleteSuccess({ subscriberEmails })); // Remove from UI
+      dispatch(bulkStatusUpdateSuccess({ subscriberEmails, status: 'inactive' }));
+      dispatch(fetchDomains());
       onSuccess?.(data.SuccessResponse.data);
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to inactivate subscribers";
-      dispatch(bulkDeleteFail(errorMessage));
+      dispatch(bulkStatusUpdateFail(errorMessage));
       onError?.(errorMessage);
     }
   } catch (error) {
@@ -50,7 +55,40 @@ export const bulkInactiveSubscribers = (domain, subscriberEmails, onSuccess, onE
       error?.response?.data?.ErrorResponse?.message ||
       error?.response?.data?.message ||
       "Something went wrong";
-    dispatch(bulkDeleteFail(errorMessage));
+    dispatch(bulkStatusUpdateFail(errorMessage));
+    onError?.(errorMessage);
+  }
+};
+
+// Bulk Active Subscribers Action
+export const bulkActiveSubscribers = (domain, subscriberEmails, onSuccess, onError) => async (dispatch) => {
+  dispatch(bulkStatusUpdateRequest());
+  try {
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+      dispatch(isUserFail("Please login to continue"));
+      return;
+    }
+    const { data } = await axios.post(`/api/v1/subscribers/domains/${domain}/bulk-active`, { emails: subscriberEmails }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (data?.SuccessResponse?.success) {
+      dispatch(bulkStatusUpdateSuccess({ subscriberEmails, status: 'active' }));
+      dispatch(fetchDomains());
+      onSuccess?.(data.SuccessResponse.data);
+    } else {
+      const errorMessage = data?.ErrorResponse?.message || "Failed to activate subscribers";
+      dispatch(bulkStatusUpdateFail(errorMessage));
+      onError?.(errorMessage);
+    }
+  } catch (error) {
+    const errorMessage =
+      error?.response?.data?.ErrorResponse?.message ||
+      error?.response?.data?.message ||
+      "Something went wrong";
+    dispatch(bulkStatusUpdateFail(errorMessage));
     onError?.(errorMessage);
   }
 };
@@ -75,6 +113,7 @@ export const addSubscriber = (subscriberData, onSuccess, onError, shouldRefetchD
     
     if (data?.SuccessResponse?.success) {
       dispatch(addSubscriberSuccess(data.SuccessResponse.data));
+      dispatch(fetchDomains());
       
       // If shouldRefetchDomain is provided, refetch the subscriber list for that domain
       if (shouldRefetchDomain) {
@@ -118,6 +157,7 @@ export const bulkUploadSubscribers = (formData, onSuccess, onError, shouldRefetc
     
     if (data?.SuccessResponse?.success) {
       dispatch(bulkUploadSuccess(data.SuccessResponse.data));
+      dispatch(fetchDomains());
       
       // If shouldRefetchDomain is provided, refetch the subscriber list for that domain
       if (shouldRefetchDomain) {
@@ -195,7 +235,7 @@ export const getSubscribersByDomain = (domain, params = {}, onSuccess, onError) 
 };
 
 // Update other subscriber actions to use the correct endpoints if needed
-export const updateSubscriber = (domain, subscriberData, onSuccess, onError) => async (dispatch) => {
+export const updateSubscriber = (domain, subscriberData, onSuccess, onError, oldEmail = null) => async (dispatch) => {
   // console.log("Updating subscriber:", subscriberData);
   dispatch(updateSubscriberRequest());
   
@@ -207,8 +247,13 @@ export const updateSubscriber = (domain, subscriberData, onSuccess, onError) => 
       return;
     }
 
+    const emailToUse = oldEmail || subscriberData.oldEmail;
+    const url = emailToUse 
+      ? `/api/v1/subscribers/domains/${domain}/update?oldEmail=${encodeURIComponent(emailToUse)}`
+      : `/api/v1/subscribers/domains/${domain}/update`;
+
     // Update endpoint - adjust based on your actual update endpoint
-    const { data } = await axios.put(`/api/v1/subscribers/domains/${domain}/update`, subscriberData, {
+    const { data } = await axios.put(url, subscriberData, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -216,6 +261,7 @@ export const updateSubscriber = (domain, subscriberData, onSuccess, onError) => 
     
     if (data?.SuccessResponse?.success) {
       dispatch(updateSubscriberSuccess(data.SuccessResponse.data));
+      dispatch(fetchDomains());
       onSuccess?.(data.SuccessResponse.data);
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to update subscriber";
@@ -250,6 +296,7 @@ export const deleteSubscriber = (domain, subscriberEmail, onSuccess, onError) =>
     });
     if (data?.SuccessResponse?.success) {
       dispatch(deleteSubscriberSuccess({ subscriberEmail }));
+      dispatch(fetchDomains());
       onSuccess?.(data.SuccessResponse.data);
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to delete subscriber";
@@ -284,6 +331,7 @@ export const bulkDeleteSubscribers = (domain, subscriberEmails, onSuccess, onErr
     });
     if (data?.SuccessResponse?.success) {
       dispatch(bulkDeleteSuccess({ subscriberEmails }));
+      dispatch(fetchDomains());
       onSuccess?.(data.SuccessResponse.data);
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Failed to delete subscribers";

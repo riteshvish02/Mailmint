@@ -22,8 +22,6 @@ const App = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-
         <Route path="/auth" element={<AuthPage />} />
         <Route
           path="/"

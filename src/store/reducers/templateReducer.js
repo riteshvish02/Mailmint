@@ -50,7 +50,7 @@ export const templateSlice = createSlice({
     },
     fetchTemplatesSuccess: (state, action) => {
       state.fetchLoading = false;
-      state.templates = action.payload || [];
+      state.templates = Array.isArray(action.payload) ? action.payload : [];
       state.fetchError = null;
     },
     fetchTemplatesFail: (state, action) => {

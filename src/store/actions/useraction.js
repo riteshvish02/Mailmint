@@ -15,18 +15,20 @@ export const userLogin = (info,navigate,toast) => async (dispatch) => {
   try {
     const { data } = await axios.post("/api/v1/user/login", info);
     if (data?.SuccessResponse?.success) {
-      const token = data?.SuccessResponse?.data?.accessToken;
-      localStorage.setItem('userToken', token);
-      dispatch(isUserSuccess(data.SuccessResponse.data.user));
+      const token = data?.SuccessResponse?.data?.accessToken || data?.accessToken;
+      if (token && token !== 'undefined') {
+        localStorage.setItem('userToken', token);
+      }
+      dispatch(isUserSuccess(data.SuccessResponse.data.user || data.SuccessResponse.data));
       toast.success("LoggedIn successfully");
-      navigate('/'); 
+      navigate('/dashboard'); 
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Login failed";
       dispatch(isUserFail(errorMessage));
       navigate('/auth');
     }
   } catch (error) {
-    const errorMessage = error?.ErrorResponse?.message || error.response.data.ErrorResponse.message || error.message || "Login failed";
+    const errorMessage = error?.ErrorResponse?.message || error?.response?.data?.ErrorResponse?.message || error.message || "Login failed";
     dispatch(isUserFail(errorMessage));
     navigate('/auth');
   }
@@ -38,11 +40,13 @@ export const userRegister = (info,navigate,toast) => async (dispatch) => {
     const { data } = await axios.post("/api/v1/user/register", info);
     
     if (data?.SuccessResponse?.success) {
-      const token = data?.SuccessResponse?.data?.accessToken;
-      localStorage.setItem('userToken', token);
-      dispatch(isUserSuccess(data.SuccessResponse.data.user));
+      const token = data?.SuccessResponse?.data?.accessToken || data?.accessToken;
+      if (token && token !== 'undefined') {
+        localStorage.setItem('userToken', token);
+      }
+      dispatch(isUserSuccess(data.SuccessResponse.data.user || data.SuccessResponse.data));
       toast.success("SignedUp successfully");
-      navigate('/'); 
+      navigate('/dashboard'); 
     } else {
       const errorMessage = data?.ErrorResponse?.message || "Registration failed";
       dispatch(isUserFail(errorMessage));

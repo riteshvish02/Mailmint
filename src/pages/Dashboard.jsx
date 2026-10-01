@@ -29,7 +29,6 @@ import { toast } from 'react-toastify';
 import { userLogout } from '../store/actions/useraction';
 import { fetchDomains } from '../store/actions/domainaction';
 import { listTemplates } from '../store/actions/templateaction';
-import { getSubscribersByDomain } from '../store/actions/subsaction'; // Import the action
 
 const Dashboard = () => {
     const dispatch = useDispatch();
@@ -58,7 +57,6 @@ const Dashboard = () => {
     });
 
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [loadingSubscribers, setLoadingSubscribers] = useState(false);
 
     // Check authentication status on component mount
     useEffect(() => {
@@ -88,111 +86,25 @@ const Dashboard = () => {
         }
     }, [dispatch, isAuthenticated]);
 
-    // Load subscribers count for all domains
-    useEffect(() => {
-        const loadSubscribersData = async () => {
-            if (domains.length === 0) return;
-            
-            setLoadingSubscribers(true);
-            try {
-                let totalSubscribers = 0;
-                
-                // Fetch subscribers for each domain sequentially to avoid overwhelming the API
-                for (const domain of domains) {
-                    try {
-                        const domainName = domain.domain || domain.name || domain.domainName;
-                        if (!domainName) {
-                            console.warn('Domain name not found for domain:', domain);
-                            continue;
-                        }
-
-                        await new Promise((resolve) => {
-                            dispatch(getSubscribersByDomain(
-                                domainName,
-                                (data) => {
-                                    // Handle different possible response structures
-                                    let count = 0;
-                                    console.log(`Response for ${domainName}:`, data);
-                                    
-                                    // Check if it's a successful response with subscribers array
-                                    if (data && data.subscribers && Array.isArray(data.subscribers)) {
-                                        count = data.subscribers.length;
-                                    } else if (data && data.data && Array.isArray(data.data)) {
-                                        count = data.data.length;
-                                    } else if (data && typeof data.count === 'number') {
-                                        count = data.count;
-                                    } else if (Array.isArray(data)) {
-                                        count = data.length;
-                                    } else {
-                                        console.log(`Unexpected data structure for ${domainName}:`, data);
-                                    }
-                                    
-                                    totalSubscribers += count;
-                                    console.log(`Domain ${domainName}: ${count} subscribers (Total so far: ${totalSubscribers})`);
-                                    resolve();
-                                },
-                                (error) => {
-                                    // Note: Due to Redux action implementation, successful responses 
-                                    // are sometimes routed to this error callback
-                                    
-                                    // Check if the "error" is actually a successful response
-                                    if (error && error.subscribers && Array.isArray(error.subscribers)) {
-                                        const count = error.subscribers.length;
-                                        totalSubscribers += count;
-                                        console.log(`Domain ${domainName}: ${count} subscribers (via error callback)`);
-                                    } else {
-                                        // This is an actual error
-                                        console.error(`Error loading subscribers for ${domainName}:`, error);
-                                    }
-                                    
-                                    resolve(); // Continue with other domains
-                                }
-                            ));
-                        });
-                        
-                        // Small delay between API calls to be nice to the server
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        
-                    } catch (error) {
-                        console.error(`Error processing domain:`, domain, error);
-                    }
-                }
-                
-                console.log(`Total subscribers across all domains: ${totalSubscribers}`);
-                
-                setDashboardStats(prev => ({
-                    ...prev,
-                    totalSubscribers: totalSubscribers
-                }));
-                
-            } catch (error) {
-                console.error('Error loading subscribers data:', error);
-                toast.error('Failed to load subscriber counts');
-            } finally {
-                setLoadingSubscribers(false);
-            }
-        };
-
-        // Only load subscribers after domains are loaded
-        if (domains.length > 0) {
-            loadSubscribersData();
-        }
-    }, [dispatch, domains]);
-
-    // Update stats when data changes
+    // Update stats directly when domains or templates change
     useEffect(() => {
         const updateStats = () => {
-            const activeDomains = domains.filter(domain => domain.status === 'Active').length;
-            const activeTemplates = templates.filter(template => template.status === 'Active').length;
+            const domainList = Array.isArray(domains) ? domains : [];
+            const templateList = Array.isArray(templates) ? templates : [];
+            const activeDomains = domainList.filter(domain => domain && (domain.status === 'verified' || domain.status === 'Active')).length;
+            const activeTemplates = templateList.filter(template => template && template.status === 'Active').length;
+            const totalSubscribers = domainList.reduce((acc, d) => acc + (Number(d.subscribers) || 0), 0);
+            const activeSubscribers = domainList.reduce((acc, d) => acc + (Number(d.activeSubscribers) || 0), 0);
             
             setDashboardStats(prev => ({
                 ...prev,
-                totalDomains: domains.length,
+                totalDomains: domainList.length,
                 activeDomains: activeDomains,
-                totalTemplates: templates.length,
+                totalTemplates: templateList.length,
                 activeTemplates: activeTemplates,
-                emailsSentToday: 17000,  // Keep these as mock data for now
-                emailsSentThisMonth: 170000  
+                totalSubscribers: totalSubscribers,
+                activeSubscribers: activeSubscribers,
+                emailsSentToday: domainList.reduce((acc, d) => acc + (Number(d.emailsSent) || 0), 0),
             }));
         };
 
@@ -342,18 +254,11 @@ const Dashboard = () => {
                                         <div>
                                             <p className="text-sm text-gray-600">Total Subscribers</p>
                                             <p className="text-2xl font-bold text-purple-600">
-                                                {loadingSubscribers ? (
-                                                    <span className="flex items-center">
-                                                        <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-                                                        Loading...
-                                                    </span>
-                                                ) : (
-                                                    dashboardStats.totalSubscribers.toLocaleString()
-                                                )}
+                                                {domainLoading ? '...' : (dashboardStats.totalSubscribers || 0).toLocaleString()}
                                             </p>
                                             <p className="text-xs text-green-600 mt-1 flex items-center">
                                                 <TrendingUp className="h-3 w-3 mr-1" />
-                                                {loadingSubscribers ? 'Calculating...' : 'Real-time count'}
+                                                {typeof dashboardStats.activeSubscribers === 'number' ? `${dashboardStats.activeSubscribers.toLocaleString()} Active` : 'Real-time count'}
                                             </p>
                                         </div>
                                     </div>

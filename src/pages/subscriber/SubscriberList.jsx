@@ -1,27 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X } from 'lucide-react';
+import { Users, Eye, Search, Mail, User, Loader2, AlertCircle, RefreshCw, Trash2, Edit2, Plus, Save, X, Check } from 'lucide-react';
 import { fetchDomains } from "../../store/actions/domainaction";
 import { 
   getSubscribersByDomain, 
   deleteSubscriber, 
   bulkDeleteSubscribers, 
   updateSubscriber,
-  addSubscriber 
+  addSubscriber,
+  bulkInactiveSubscribers,
+  bulkActiveSubscribers
 } from "../../store/actions/subsaction";
 import { 
   setCurrentViewedDomain,
   addSubscriberOptimistic,
   removeOptimisticSubscriber
 } from "../../store/reducers/subsReducer";
-import { bulkInactiveSubscribers } from "../../store/actions/subsaction";
 import { useDispatch, useSelector } from 'react-redux';
 import axios from '../../utils/Axios';
 
 const SubscriberList = () => {
   const [viewDomain, setViewDomain] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSubscribers, setSelectedSubscribers] = useState(new Set());
   
   // Server-side pagination state
@@ -95,16 +97,19 @@ const SubscriberList = () => {
     dispatch(fetchDomains());
   };
 
-  const handleViewDomainSubscribers = (domainName, page = 1, search = '') => {
+  const handleViewDomainSubscribers = (domainName, page = 1, search = '', filterStatus = statusFilter) => {
     setViewDomain(domainName);
     dispatch(setCurrentViewedDomain(domainName));
     
-    // Send pagination and search parameters to backend
+    // Send pagination, search, and status filter parameters to backend
     const params = {
       page: page,
       limit: subscribersPerPage,
       search: search.trim()
     };
+    if (filterStatus && filterStatus !== 'all') {
+      params.status = filterStatus;
+    }
     
     dispatch(getSubscribersByDomain(
       domainName, 
@@ -192,46 +197,30 @@ const SubscriberList = () => {
   };
 
   const handleSaveEdit = (subscriber) => {
-    // If email is being changed, send oldEmail as query param
     const originalEmail = subscriber.emailAddress || subscriber.Email || '';
-    const newEmail = editForm.email ? editForm.email : originalEmail;
+    const newEmail = editForm.email ? editForm.email.trim() : originalEmail;
     const updatedData = {
       ...subscriber,
       name: editForm.subscriberName, // backend expects 'name'
       email: newEmail,
       status: editForm.status,
       domain: viewDomain,
+      oldEmail: originalEmail,
     };
-    // If email is changed, pass oldEmail as query param
-    const updateAction = (dispatchUpdateSubscriber) => {
-      if (newEmail !== originalEmail) {
-        dispatch(updateSubscriber(
-          viewDomain,
-          { ...updatedData },
-          () => {
-            dispatch(getSubscribersByDomain(viewDomain, { page: currentPage, limit: subscribersPerPage, search: searchTerm }));
-            setEditingSubscriber(null);
-          },
-          (error) => {
-            alert('Update failed: ' + error);
-          },
-          originalEmail // pass oldEmail
-        ));
-      } else {
-        dispatch(updateSubscriber(
-          viewDomain,
-          { ...updatedData },
-          () => {
-            dispatch(getSubscribersByDomain(viewDomain, { page: currentPage, limit: subscribersPerPage, search: searchTerm }));
-            setEditingSubscriber(null);
-          },
-          (error) => {
-            alert('Update failed: ' + error);
-          }
-        ));
-      }
-    };
-    updateAction(dispatch);
+
+    dispatch(updateSubscriber(
+      viewDomain,
+      updatedData,
+      () => {
+        handleViewDomainSubscribers(viewDomain, currentPage, searchTerm, statusFilter);
+        setEditingSubscriber(null);
+        dispatch(fetchDomains());
+      },
+      (error) => {
+        alert('Update failed: ' + error);
+      },
+      originalEmail
+    ));
   };
 
   const handleCancelEdit = () => {
@@ -275,7 +264,8 @@ const SubscriberList = () => {
         viewDomain,
         subscriberEmail,
         () => {
-          dispatch(getSubscribersByDomain(viewDomain, { page: currentPage, limit: subscribersPerPage, search: searchTerm }));
+          handleViewDomainSubscribers(viewDomain, currentPage, searchTerm, statusFilter);
+          dispatch(fetchDomains());
           alert('Subscriber deleted successfully!');
         },
         (error) => {
@@ -293,8 +283,9 @@ const SubscriberList = () => {
         viewDomain,
         Array.from(selectedSubscribers),
         () => {
-          dispatch(getSubscribersByDomain(viewDomain, { page: currentPage, limit: subscribersPerPage, search: searchTerm }));
+          handleViewDomainSubscribers(viewDomain, currentPage, searchTerm, statusFilter);
           setSelectedSubscribers(new Set());
+          dispatch(fetchDomains());
           alert(`Successfully deleted ${selectedSubscribers.size} subscribers!`);
         },
         (error) => {
@@ -304,24 +295,45 @@ const SubscriberList = () => {
     }
   };
 
-    // Bulk Inactive logic
-    const handleBulkInactive = () => {
-      if (selectedSubscribers.size === 0) return;
-      if (window.confirm(`Are you sure you want to mark ${selectedSubscribers.size} selected subscribers as inactive?`)) {
-        dispatch(bulkInactiveSubscribers(
-          viewDomain,
-          Array.from(selectedSubscribers),
-          () => {
-            dispatch(getSubscribersByDomain(viewDomain, { page: currentPage, limit: subscribersPerPage, search: searchTerm }));
-            setSelectedSubscribers(new Set());
-            alert(`Successfully marked ${selectedSubscribers.size} subscribers as inactive!`);
-          },
-          (error) => {
-            alert('Bulk inactive failed: ' + error);
-          }
-        ));
-      }
-    };
+  // Bulk Inactive logic
+  const handleBulkInactive = () => {
+    if (selectedSubscribers.size === 0) return;
+    if (window.confirm(`Are you sure you want to mark ${selectedSubscribers.size} selected subscribers as inactive?\n\nThey will be excluded from email campaigns.`)) {
+      dispatch(bulkInactiveSubscribers(
+        viewDomain,
+        Array.from(selectedSubscribers),
+        () => {
+          handleViewDomainSubscribers(viewDomain, currentPage, searchTerm, statusFilter);
+          setSelectedSubscribers(new Set());
+          dispatch(fetchDomains());
+          alert(`Successfully marked ${selectedSubscribers.size} subscribers as inactive!`);
+        },
+        (error) => {
+          alert('Bulk inactive failed: ' + error);
+        }
+      ));
+    }
+  };
+
+  // Bulk Active logic
+  const handleBulkActive = () => {
+    if (selectedSubscribers.size === 0) return;
+    if (window.confirm(`Are you sure you want to mark ${selectedSubscribers.size} selected subscribers as active?\n\nThey will become eligible for future email campaigns.`)) {
+      dispatch(bulkActiveSubscribers(
+        viewDomain,
+        Array.from(selectedSubscribers),
+        () => {
+          handleViewDomainSubscribers(viewDomain, currentPage, searchTerm, statusFilter);
+          setSelectedSubscribers(new Set());
+          dispatch(fetchDomains());
+          alert(`Successfully marked ${selectedSubscribers.size} subscribers as active!`);
+        },
+        (error) => {
+          alert('Bulk active failed: ' + error);
+        }
+      ));
+    }
+  };
 
   // Handle paginated response from backend
   let safeDomainSubscribers = [];
@@ -373,25 +385,24 @@ const SubscriberList = () => {
     }
   }, [filteredSubscribers]);
 
-  // Backend now supports pagination with search
-  
-  // Handle search with debouncing
+  // Handle search and statusFilter with debouncing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (viewDomain) {
-        // Backend now supports both pagination and search
-        handleViewDomainSubscribers(viewDomain, 1, searchTerm);
+        // Backend supports pagination, search, and status filtering
+        handleViewDomainSubscribers(viewDomain, 1, searchTerm, statusFilter);
       }
-    }, 500); // 500ms delay for debouncing
+    }, 400); // 400ms delay for debouncing
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   // Reset to first page when domain changes
   useEffect(() => {
     if (viewDomain) {
       setCurrentPage(1);
       setSearchTerm('');
+      setStatusFilter('all');
     }
   }, [viewDomain]);
 
@@ -492,21 +503,38 @@ const SubscriberList = () => {
               )}
             </div>
 
-            {/* Search Bar */}
+            {/* Search and Status Filter */}
             {viewDomain && (
-              <div>
-                <label className="block text-sm font-medium text-blue-800 mb-2">
-                  Search Subscribers
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by email or name..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-blue-800 mb-2">
+                    Search Subscribers
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search by email or name..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-blue-800 mb-2">
+                    Status Filter
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base font-medium"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -565,6 +593,36 @@ const SubscriberList = () => {
                 </div>
               </div>
 
+              {/* Dynamic Domain Statistics Banner */}
+              {domainSubscribers?.statusBreakdown && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="text-xs text-blue-600 font-medium block">Total Subscribers</span>
+                    <span className="text-lg sm:text-xl font-bold text-blue-900">
+                      {domainSubscribers.statusBreakdown.total ?? 0}
+                    </span>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <span className="text-xs text-green-700 font-medium block">Active (Receiving)</span>
+                    <span className="text-lg sm:text-xl font-bold text-green-900">
+                      {domainSubscribers.statusBreakdown.active ?? 0}
+                    </span>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <span className="text-xs text-red-600 font-medium block">Inactive (Excluded)</span>
+                    <span className="text-lg sm:text-xl font-bold text-red-900">
+                      {domainSubscribers.statusBreakdown.inactive ?? 0}
+                    </span>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <span className="text-xs text-amber-700 font-medium block">Emails Remaining</span>
+                    <span className="text-lg sm:text-xl font-bold text-amber-900">
+                      {domainSubscribers.statusBreakdown.pendingUnsent ?? 0}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Bulk Actions */}
               {filteredSubscribers.length > 0 && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
@@ -583,22 +641,30 @@ const SubscriberList = () => {
                   </div>
                   
                   {selectedSubscribers.size > 0 && (
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={handleBulkDelete}
-                        className="px-3 sm:px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs sm:text-sm flex items-center justify-center"
+                        className="px-3 sm:px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs sm:text-sm flex items-center justify-center shadow-sm transition"
+                        title="Permanently delete selected subscribers"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Delete Selected ({selectedSubscribers.size})</span>
-                        <span className="sm:hidden">Delete ({selectedSubscribers.size})</span>
+                        <span>Delete ({selectedSubscribers.size})</span>
                       </button>
                       <button
                         onClick={handleBulkInactive}
-                        className="px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs sm:text-sm flex items-center justify-center"
+                        className="px-3 sm:px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-xs sm:text-sm flex items-center justify-center shadow-sm transition"
+                        title="Mark selected subscribers as inactive (they will not receive emails)"
                       >
                         <X className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Mark Inactive ({selectedSubscribers.size})</span>
-                        <span className="sm:hidden">Inactive ({selectedSubscribers.size})</span>
+                        <span>Mark Inactive ({selectedSubscribers.size})</span>
+                      </button>
+                      <button
+                        onClick={handleBulkActive}
+                        className="px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-xs sm:text-sm flex items-center justify-center shadow-sm transition"
+                        title="Mark selected subscribers as active (eligible to receive emails)"
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        <span>Mark Active ({selectedSubscribers.size})</span>
                       </button>
                     </div>
                   )}
@@ -738,6 +804,11 @@ const SubscriberList = () => {
                                 {subscriber.status}
                               </span>
                             )}
+                            {subscriber.track && (
+                              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                {subscriber.track}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -873,6 +944,11 @@ const SubscriberList = () => {
                                   : 'bg-red-100 text-red-800'
                               }`}>
                                 {subscriber.status}
+                              </span>
+                            )}
+                            {subscriber.track && (
+                              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200" title={`Tracking: ${subscriber.track}`}>
+                                {subscriber.track}
                               </span>
                             )}
                           </div>

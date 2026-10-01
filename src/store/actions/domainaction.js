@@ -24,11 +24,13 @@ export {clearQueuedLoad} from "../reducers/domainReducer";
   try {
     const token = localStorage.getItem('userToken');
     
-    if (!token) {
-      dispatch(isUserFail("Please login to continue"));
+    if (!token || token === 'undefined' || token === 'null') {
+      const msg = "Please login to continue";
+      dispatch(isUserFail(msg));
+      onError?.(msg);
       return;
     }
-    const { data } = await axios.post("/api/v1/domain/add-domain", domainData,{
+    const { data } = await axios.post("/api/v1/domain/add-domain", domainData, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -99,6 +101,27 @@ export const getSingleDomain = (id) => async (dispatch) => {
     dispatch(fetchDomainsFail(errorMessage));
   }
 };
+
+export const checkDomainVerification = (id, onSuccess, onError) => async (dispatch) => {
+  try {
+    const { data } = await axios.post(`/api/v1/domain/verify/${id}`);
+    if (data?.SuccessResponse) {
+      dispatch(fetchDomains());
+      onSuccess?.(data.SuccessResponse);
+    } else {
+      const errorMessage = data?.ErrorResponse?.message || "Failed to check verification";
+      onError?.(errorMessage);
+    }
+  } catch (error) {
+    const errorMessage =
+      error?.response?.data?.ErrorResponse?.message ||
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to check verification";
+    onError?.(errorMessage);
+  }
+};
+
 // Update Domain Action
 export const updateDomain = (domainData,id,toast) => async (dispatch) => {
  dispatch(isDomainRequest());

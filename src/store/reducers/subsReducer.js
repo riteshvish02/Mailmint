@@ -161,27 +161,30 @@ export const subscriberSlice = createSlice({
       state.updateLoading = false;
       state.updateError = null;
 
+      const updatedSub = action.payload?.subscriber || action.payload || {};
+      const targetEmail = (updatedSub.emailAddress || updatedSub.Email || updatedSub.email || '').toLowerCase();
+
       const index = state.subscribers.findIndex(
-        (sub) => sub.emailAddress === action.payload.emailAddress
+        (sub) => (sub.emailAddress || sub.Email || '').toLowerCase() === targetEmail
       );
       if (index !== -1) {
-        state.subscribers[index] = action.payload;
+        state.subscribers[index] = { ...state.subscribers[index], ...updatedSub };
       }
 
       // Update in current domain subscribers (support both formats)
       if (Array.isArray(state.currentDomainSubscribers)) {
         const domainIndex = state.currentDomainSubscribers.findIndex(
-          (sub) => sub.emailAddress === action.payload.emailAddress
+          (sub) => (sub.emailAddress || sub.Email || '').toLowerCase() === targetEmail
         );
         if (domainIndex !== -1) {
-          state.currentDomainSubscribers[domainIndex] = action.payload;
+          state.currentDomainSubscribers[domainIndex] = { ...state.currentDomainSubscribers[domainIndex], ...updatedSub };
         }
       } else if (state.currentDomainSubscribers && Array.isArray(state.currentDomainSubscribers.subscribers)) {
         const domainIndex = state.currentDomainSubscribers.subscribers.findIndex(
-          (sub) => sub.emailAddress === action.payload.emailAddress
+          (sub) => (sub.emailAddress || sub.Email || '').toLowerCase() === targetEmail
         );
         if (domainIndex !== -1) {
-          state.currentDomainSubscribers.subscribers[domainIndex] = action.payload;
+          state.currentDomainSubscribers.subscribers[domainIndex] = { ...state.currentDomainSubscribers.subscribers[domainIndex], ...updatedSub };
         }
       }
 
@@ -190,6 +193,41 @@ export const subscriberSlice = createSlice({
     updateSubscriberFail: (state, action) => {
       state.updateLoading = false;
       state.updateError = action.payload;
+    },
+
+    // Bulk Status Update Actions (Active / Inactive)
+    bulkStatusUpdateRequest: (state) => {
+      state.bulkDeleteLoading = true;
+      state.bulkDeleteError = null;
+    },
+    bulkStatusUpdateSuccess: (state, action) => {
+      state.bulkDeleteLoading = false;
+      state.bulkDeleteError = null;
+      const { subscriberEmails, status } = action.payload;
+      const lowerEmails = (subscriberEmails || []).map(e => (e || '').toLowerCase());
+
+      const updateList = (list) => {
+        if (!Array.isArray(list)) return;
+        for (const sub of list) {
+          const em = (sub.emailAddress || sub.Email || '').toLowerCase();
+          if (lowerEmails.includes(em)) {
+            sub.status = status;
+          }
+        }
+      };
+
+      updateList(state.subscribers);
+      if (Array.isArray(state.currentDomainSubscribers)) {
+        updateList(state.currentDomainSubscribers);
+      } else if (state.currentDomainSubscribers && Array.isArray(state.currentDomainSubscribers.subscribers)) {
+        updateList(state.currentDomainSubscribers.subscribers);
+      }
+
+      state.message = `Successfully marked ${subscriberEmails.length} subscribers as ${status}`;
+    },
+    bulkStatusUpdateFail: (state, action) => {
+      state.bulkDeleteLoading = false;
+      state.bulkDeleteError = action.payload;
     },
 
     // Delete Single Subscriber Actions
@@ -326,6 +364,9 @@ export const {
   bulkDeleteRequest,
   bulkDeleteSuccess,
   bulkDeleteFail,
+  bulkStatusUpdateRequest,
+  bulkStatusUpdateSuccess,
+  bulkStatusUpdateFail,
   clearSubscriberError,
   clearSubscriberMessage,
   clearBulkUploadError,

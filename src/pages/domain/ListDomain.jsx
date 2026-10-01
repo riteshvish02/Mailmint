@@ -1,15 +1,37 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDomains } from '../../store/actions/domainaction';
-import { Database, Edit, Trash2, Plus, RefreshCw, Search } from 'lucide-react';
+import { fetchDomains, checkDomainVerification } from '../../store/actions/domainaction';
+import { Database, Edit, Trash2, Plus, RefreshCw, Search, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const DomainsList = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const [checkingId, setCheckingId] = useState(null);
 
-    const { domains, fetchLoading, fetchError } = useSelector((state) => state.domain);
+    const { domains = [], fetchLoading, fetchError } = useSelector((state) => state.domain);
+    const domainList = Array.isArray(domains) ? domains : [];
     console.log(domains);
+
+    const handleCheckVerification = (id) => {
+        setCheckingId(id);
+        dispatch(checkDomainVerification(
+            id,
+            (res) => {
+                setCheckingId(null);
+                if (res?.data?.status === 'verified') {
+                    toast.success("Domain/Sender is verified! 🎉");
+                } else {
+                    toast.info(res?.message || "Verification link sent or still pending. Check your inbox.");
+                }
+            },
+            (errMsg) => {
+                setCheckingId(null);
+                toast.error(errMsg);
+            }
+        ));
+    };
     
     useEffect(() => {
         dispatch(fetchDomains());
@@ -25,7 +47,7 @@ const DomainsList = () => {
         dispatch(fetchDomains());
     };
 
-    if (fetchLoading && domains.length === 0) {
+    if (fetchLoading && domainList.length === 0) {
         return (
             <div className="p-3 sm:p-6 flex justify-center items-center min-h-64">
                 <div className="flex items-center gap-2 text-gray-600">
@@ -36,7 +58,7 @@ const DomainsList = () => {
         );
     }
 
-    return domains && (
+    return (
         <div className="p-3 sm:p-4 md:p-6">
             <div className="mb-4 sm:mb-6">
                 <div className="flex flex-col space-y-4">
@@ -95,7 +117,7 @@ const DomainsList = () => {
                 </div>
             )} */}
 
-            {domains.length === 0 ? (
+            {domainList.length === 0 ? (
                 <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
                     <Database className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No domains found</h3>
@@ -115,7 +137,7 @@ const DomainsList = () => {
                     {/* Mobile Card View */}
                     <div className="block sm:hidden bg-white">
                         <div className="divide-y divide-gray-100">
-                            {domains.map((domain) => (
+                            {domainList.map((domain) => (
                                 <div key={domain._id} className="p-4 bg-white hover:bg-gray-50 transition-colors">
                                     <div className="flex items-start space-x-3">
                                         <div className="flex-shrink-0">
@@ -126,15 +148,27 @@ const DomainsList = () => {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                                 <h3 className="font-medium text-gray-900 truncate">{domain.domain}</h3>
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                    domain.status === 'verified'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : domain.status === 'pending'
-                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                    {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
-                                                </span>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                        domain.status === 'verified'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : domain.status === 'pending'
+                                                            ? 'bg-yellow-100 text-yellow-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                                                    </span>
+                                                    {domain.status === 'pending' && (
+                                                        <button
+                                                            onClick={() => handleCheckVerification(domain._id)}
+                                                            disabled={checkingId === domain._id}
+                                                            className="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+                                                            title="Check verification or resend link"
+                                                        >
+                                                            {checkingId === domain._id ? 'Checking...' : 'Check / Resend'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="mt-1">
                                                 <p className="text-sm text-gray-600 truncate">{domain.senderMail}</p>
@@ -146,6 +180,26 @@ const DomainsList = () => {
                                                         {domain.description}
                                                     </p>
                                                 )}
+                                                <div className="mt-2 flex items-center flex-wrap gap-1.5">
+                                                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded font-medium">
+                                                        {domain.subscribers || 0} Total
+                                                    </span>
+                                                    {typeof domain.activeSubscribers === 'number' && (
+                                                        <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded font-medium">
+                                                            {domain.activeSubscribers} Active
+                                                        </span>
+                                                    )}
+                                                    {typeof domain.inactiveSubscribers === 'number' && domain.inactiveSubscribers > 0 && (
+                                                        <span className="text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded font-medium">
+                                                            {domain.inactiveSubscribers} Inactive
+                                                        </span>
+                                                    )}
+                                                    {typeof domain.emailsRemaining === 'number' && (
+                                                        <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-medium">
+                                                            {domain.emailsRemaining} Remaining
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -166,6 +220,9 @@ const DomainsList = () => {
                                         Email
                                     </th>
                                     <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Subscribers
+                                    </th>
+                                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Status
                                     </th>
                                     <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -174,7 +231,7 @@ const DomainsList = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {domains.map((domain) => (
+                                {domainList.map((domain) => (
                                     <tr key={domain._id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 lg:px-6 py-4">
                                             <div className="flex items-center">
@@ -193,15 +250,49 @@ const DomainsList = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-medium ${
-                                                domain.status === 'verified'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : domain.status === 'pending'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
-                                            </span>
+                                            <div className="flex items-center flex-wrap gap-1.5">
+                                                <span className="font-semibold text-gray-900 text-sm mr-1">
+                                                    {domain.subscribers || 0}
+                                                </span>
+                                                {typeof domain.activeSubscribers === 'number' && (
+                                                    <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                                                        {domain.activeSubscribers} Active
+                                                    </span>
+                                                )}
+                                                {typeof domain.inactiveSubscribers === 'number' && domain.inactiveSubscribers > 0 && (
+                                                    <span className="text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-medium">
+                                                        {domain.inactiveSubscribers} Inactive
+                                                    </span>
+                                                )}
+                                                {typeof domain.emailsRemaining === 'number' && (
+                                                    <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
+                                                        {domain.emailsRemaining} Left
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center space-x-2">
+                                                <span className={`inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs lg:text-sm font-medium ${
+                                                    domain.status === 'verified'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : domain.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                        : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                                                </span>
+                                                {domain.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleCheckVerification(domain._id)}
+                                                        disabled={checkingId === domain._id}
+                                                        className="px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                                        title="Check if verified or resend Brevo verification email"
+                                                    >
+                                                        {checkingId === domain._id ? 'Checking...' : 'Check / Resend'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="hidden lg:table-cell px-6 py-4">
                                             <div className="text-gray-900 line-clamp-2 max-w-xs text-sm" title={domain.description}>

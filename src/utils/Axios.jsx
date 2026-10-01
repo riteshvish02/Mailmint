@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-const baseURL = window.location.hostname === 'localhost'
-  ? 'http://localhost:3001'
-  : 'https://email-marketing-h939.onrender.com';
+const baseURL = import.meta.env.VITE_API_URL || (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://email-marketing-h939.onrender.com'
+);
 const Instance = axios.create({
     baseURL,
     withCredentials: true,
@@ -12,8 +14,10 @@ Instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem("userToken");
   
-      if (token) {
+      if (token && token !== "undefined" && token !== "null") {
         config.headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        delete config.headers["Authorization"];
       }
   
       return config;

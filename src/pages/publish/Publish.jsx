@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-const POLL_INTERVAL = 1400; // 500 milliseconds
 import { useDispatch, useSelector } from "react-redux";
-import { fetchDomains, PublishMail, resetDomainEmailStatus,clearQueuedLoad } from "../../store/actions/domainaction";
+import { fetchDomains, PublishMail, resetDomainEmailStatus, clearQueuedLoad } from "../../store/actions/domainaction";
+import { updateDomainProgress } from "../../store/reducers/domainReducer";
+import socket from "../../utils/socket";
 import {
   Database,
   Edit,
@@ -13,10 +14,12 @@ import {
   Mail,
   FileText,
   X,
+  Radio,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
-import {toast} from "react-toastify";
+import { toast } from "react-toastify";
 import { useNavigate, Link } from "react-router-dom";
-
 
 const Publish = () => {
   const dispatch = useDispatch();
@@ -27,42 +30,66 @@ const Publish = () => {
   const [selectedDomainId, setSelectedDomainId] = useState(null);
   const [emailLimit, setEmailLimit] = useState('');
   const [publishingDomains, setPublishingDomains] = useState(new Set());
+  const [socketConnected, setSocketConnected] = useState(socket.connected);
+  const [resetModalData, setResetModalData] = useState(null);
 
-  const { domains, fetchLoading,queuedLoad } = useSelector(
+  const { domains = [], fetchLoading, queuedLoad } = useSelector(
     (state) => state.domain
   );
-  console.log(queuedLoad);
+  const domainList = Array.isArray(domains) ? domains : [];
 
-useEffect(() => {
-  let interval;
+  useEffect(() => {
+    // Initial fetch
+    dispatch(fetchDomains());
 
-  // Initial fetch
-  dispatch(fetchDomains());
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
 
-  const startPolling = () => {
-    interval = setInterval(() => {
-      console.log("Fetching domains...");
+    // Socket event handlers for real-time progress
+    const handleProgress = (data) => {
+      console.log("⚡ [Socket] campaign:progress received:", data);
+      dispatch(updateDomainProgress(data));
+    };
+
+    const handleComplete = (data) => {
+      console.log("✅ [Socket] campaign:complete received:", data);
+      dispatch(updateDomainProgress(data));
       dispatch(fetchDomains());
-    }, POLL_INTERVAL);
-  };
+    };
 
-  // Handle tab visibility changes
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
+    const handleStatsUpdated = (data) => {
+      console.log("🔄 [Socket] domain:stats_updated received:", data);
+      dispatch(fetchDomains());
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("campaign:progress", handleProgress);
+    socket.on("campaign:complete", handleComplete);
+    socket.on("domain:stats_updated", handleStatsUpdated);
+
+    // Lightweight 30s fallback (replaces previous aggressive 1.4s loop)
+    const interval = setInterval(() => {
+      dispatch(fetchDomains());
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        dispatch(fetchDomains());
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("campaign:progress", handleProgress);
+      socket.off("campaign:complete", handleComplete);
+      socket.off("domain:stats_updated", handleStatsUpdated);
       clearInterval(interval);
-    } else {
-      startPolling();
-    }
-  };
-
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  startPolling();
-
-  return () => {
-    clearInterval(interval);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
-}, [dispatch]); // Added fetchError as dependency
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [dispatch]);
 
   // Monitor sendingInProgress and clear queuedLoad when sending is complete
   useEffect(() => {
@@ -123,9 +150,33 @@ useEffect(() => {
     setSelectedDomainId(null);
   };
 
-  const handleResetDomain = (domainId) => {
-    dispatch(resetDomainEmailStatus(domainId, toast));
-    // setPublishingIds((prev) => prev.filter(id => id !== domainId)); // Enable publish after reset
+  const handleResetDomain = (domainOrId) => {
+    const domain = typeof domainOrId === 'object'
+      ? domainOrId
+      : domainList.find(d => d._id === domainOrId) || { _id: domainOrId, domain: 'this domain' };
+
+    setResetModalData({
+      isOpen: true,
+      domain: domain
+    });
+  };
+
+  const closeResetModal = () => {
+    setResetModalData(null);
+  };
+
+  const confirmResetAction = () => {
+    if (!resetModalData?.domain) return;
+    const domain = resetModalData.domain;
+
+    setPublishingDomains(prev => {
+      const next = new Set(prev);
+      next.delete(domain._id);
+      return next;
+    });
+
+    dispatch(resetDomainEmailStatus(domain._id, toast));
+    setResetModalData(null);
   };
 
   if (fetchLoading && domains.length === 0) {
@@ -151,6 +202,16 @@ useEffect(() => {
                   <div className="flex items-center">
                     <Database className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-blue-600" />
                     <span>Publish Mail</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ml-3 ${
+                      socketConnected 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      }`}></span>
+                      {socketConnected ? 'Live Sync' : 'Reconnecting...'}
+                    </span>
                   </div>
                   <span className="text-sm font-normal text-gray-500 mt-1 sm:mt-0 sm:ml-2">
                     ({domains.length} total)
@@ -210,7 +271,7 @@ useEffect(() => {
             {/* Mobile Card View */}
             <div className="block xl:hidden">
               <div className="divide-y divide-gray-100">
-                {domains.map((domain) => (
+                {domainList.map((domain) => (
                   <div key={domain._id} className="p-4 hover:bg-gray-50 transition-colors">
                     <div className="space-y-4">
                       
@@ -292,8 +353,13 @@ useEffect(() => {
                           <div className="flex flex-col space-y-1">
                             <span className="font-semibold text-blue-900 text-sm">{domain.subscribers}</span>
                             {typeof domain.activeSubscribers === 'number' && (
-                              <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full w-fit">
+                              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full w-fit">
                                 Active: {domain.activeSubscribers}
+                              </span>
+                            )}
+                            {typeof domain.inactiveSubscribers === 'number' && domain.inactiveSubscribers > 0 && (
+                              <span className="text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full w-fit">
+                                Inactive: {domain.inactiveSubscribers}
                               </span>
                             )}
                           </div>
@@ -376,15 +442,19 @@ useEffect(() => {
                           Track
                         </Link>
 
-                        {/* Show Reset button only if sending is NOT in progress and emailsTotal > 0 */}
-                        {(!domain.sendingInProgress && domain.emailsTotal > 0) && (
-                          <button
-                            onClick={() => handleResetDomain(domain._id)}
-                            className="px-3 py-2 border border-gray-400 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
-                          >
-                            Reset
-                          </button>
-                        )}
+                        {/* Reset button - ALWAYS VISIBLE */}
+                        <button
+                          onClick={() => handleResetDomain(domain)}
+                          title={domain.sendingInProgress ? "Stop active campaign and reset" : "Reset campaign & mark all subscribers pending"}
+                          className={`inline-flex items-center justify-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md transition-all ${
+                            domain.sendingInProgress
+                              ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 hover:border-rose-400 font-semibold'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900'
+                          }`}
+                        >
+                          <RotateCcw className={`h-4 w-4 mr-1 ${domain.sendingInProgress ? 'text-rose-600 animate-spin' : 'text-gray-500'}`} />
+                          {domain.sendingInProgress ? 'Stop & Reset' : 'Reset'}
+                        </button>
                       </div>
                       
                     </div>
@@ -431,7 +501,7 @@ useEffect(() => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {domains.map((domain) => (
+                  {domainList.map((domain) => (
                     <tr
                       key={domain._id}
                       className="hover:bg-gray-50 transition-colors"
@@ -493,8 +563,13 @@ useEffect(() => {
                       <td className="px-4 2xl:px-6 py-4 whitespace-nowrap">
                         <span className="font-semibold text-gray-900 text-sm 2xl:text-base">{domain.subscribers}</span>
                         {typeof domain.activeSubscribers === 'number' && (
-                          <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                          <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
                             Active: {domain.activeSubscribers}
+                          </span>
+                        )}
+                        {typeof domain.inactiveSubscribers === 'number' && domain.inactiveSubscribers > 0 && (
+                          <span className="ml-1 text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full font-medium">
+                            Inactive: {domain.inactiveSubscribers}
                           </span>
                         )}
                       </td>
@@ -567,15 +642,19 @@ useEffect(() => {
                           Track
                         </Link>
 
-                        {/* Show Reset button only if sending is NOT in progress and emailsTotal > 0 */}
-                        {(!domain.sendingInProgress && domain.emailsTotal > 0) && (
-                          <button
-                            onClick={() => handleResetDomain(domain._id)}
-                            className="inline-flex items-center px-3 py-2 border border-gray-400 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
-                          >
-                            Reset
-                          </button>
-                        )}
+                        {/* Reset button - ALWAYS VISIBLE */}
+                        <button
+                          onClick={() => handleResetDomain(domain)}
+                          title={domain.sendingInProgress ? "Stop active campaign and reset" : "Reset campaign & mark all subscribers pending"}
+                          className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md transition-all ${
+                            domain.sendingInProgress
+                              ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 hover:border-rose-400 font-semibold'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900'
+                          }`}
+                        >
+                          <RotateCcw className={`h-4 w-4 mr-1 ${domain.sendingInProgress ? 'text-rose-600 animate-spin' : 'text-gray-500'}`} />
+                          {domain.sendingInProgress ? 'Stop & Reset' : 'Reset'}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -688,6 +767,131 @@ useEffect(() => {
               Publish
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modern Reset Confirmation Modal */}
+    {resetModalData?.isOpen && resetModalData?.domain && (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 sm:p-6 w-full max-w-md mx-4 transform transition-all">
+          
+          {/* Header */}
+          <div className="flex items-start justify-between pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${
+                resetModalData.domain.sendingInProgress 
+                  ? 'bg-rose-100 text-rose-600 ring-4 ring-rose-50' 
+                  : 'bg-indigo-100 text-indigo-600 ring-4 ring-indigo-50'
+              }`}>
+                {resetModalData.domain.sendingInProgress ? (
+                  <AlertTriangle className="h-6 w-6 animate-pulse" />
+                ) : (
+                  <RotateCcw className="h-6 w-6" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  {resetModalData.domain.sendingInProgress 
+                    ? 'Stop & Reset Campaign?' 
+                    : 'Reset Campaign?'}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {resetModalData.domain.sendingInProgress 
+                    ? 'Active email sending in progress' 
+                    : 'Prepare domain for fresh email delivery'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={closeResetModal}
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Domain Pill */}
+          <div className="my-4 p-3 bg-gray-50 rounded-xl border border-gray-200/70">
+            <div className="text-xs text-gray-500 font-medium mb-1">Target Sender / Domain:</div>
+            <div className="text-sm font-semibold text-gray-900 flex items-center justify-between">
+              <span className="truncate">{resetModalData.domain.domain || resetModalData.domain.name}</span>
+              {resetModalData.domain.sendingInProgress && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 animate-pulse">
+                  ● Sending Active
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Clean User-Friendly Points */}
+          <div className="space-y-2.5 text-xs sm:text-sm text-gray-600 mb-6">
+            {resetModalData.domain.sendingInProgress ? (
+              <>
+                <div className="flex items-start gap-2.5 p-2.5 bg-rose-50/80 border border-rose-200/80 rounded-xl text-rose-900">
+                  <span className="text-base leading-none">🛑</span>
+                  <div>
+                    <span className="font-bold">Immediate Abort:</span> Halts all remaining email batches right away. No further emails will be sent.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 text-gray-700 px-1">
+                  <span className="text-base leading-none">🔄</span>
+                  <div>
+                    <span className="font-semibold text-gray-900">Subscribers reset to Pending:</span> All active subscribers can be emailed again from the beginning.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 text-gray-700 px-1">
+                  <span className="text-base leading-none">📊</span>
+                  <div>
+                    <span className="font-semibold text-gray-900">Zero batch counters:</span> Sent, failed, and progress stats will reset to 0.
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start gap-2.5 text-gray-700 px-1">
+                  <span className="text-base leading-none">🔄</span>
+                  <div>
+                    <span className="font-semibold text-gray-900">Renew Subscriber Queue:</span> All active subscribers will be set to pending so you can start a fresh campaign.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 text-gray-700 px-1">
+                  <span className="text-base leading-none">📊</span>
+                  <div>
+                    <span className="font-semibold text-gray-900">Reset Batch Counters:</span> Delivered, failed, and telemetry counters will reset back to 0.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 text-gray-700 px-1">
+                  <span className="text-base leading-none">🛡️</span>
+                  <div>
+                    <span className="font-semibold text-gray-900">Data Safe:</span> Your subscribers, templates, and domain settings remain completely safe.
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={closeResetModal}
+              className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmResetAction}
+              className={`flex-1 sm:flex-none px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-md transition-all flex items-center justify-center gap-2 ${
+                resetModalData.domain.sendingInProgress
+                  ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
+              }`}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {resetModalData.domain.sendingInProgress ? 'Stop Sending & Reset' : 'Confirm Reset'}
+            </button>
+          </div>
+
         </div>
       </div>
     )}
